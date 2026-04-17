@@ -1,0 +1,81 @@
+.code-editor-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #1e1e1e; /* Monaco default dark */
+  height: 100%;
+}
+
+.editor-toolbar {
+  height: 40px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+}
+
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.file-icon {
+  color: var(--accent-primary);
+}
+
+.file-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.editor-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-save, .btn-run {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.btn-save {
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+.btn-save:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
+.btn-run {
+  background: rgba(34, 211, 238, 0.1);
+  color: var(--accent-primary);
+  border: 1px solid rgba(34, 211, 238, 0.2);
+}
+
+.btn-run:hover {
+  background: rgba(34, 211, 238, 0.2);
+  transform: translateY(-1px);
+}
+
+.monaco-wrapper {
+  flex: 1;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Customizing Monaco scrollbar or other tweaks if needed */
+.monaco-editor .scroll-decoration {
+  box-shadow: none !important;
+}

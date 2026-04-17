@@ -1,0 +1,12 @@
+change: sql-schema-generator
+status: archived
+archive_date: 2026-04-18
+verification: pass
+tests: 88
+coverage: 92.1
+artifacts:
+  - proposal
+  - specs
+  - design
+  - tasks
+  - verify-report

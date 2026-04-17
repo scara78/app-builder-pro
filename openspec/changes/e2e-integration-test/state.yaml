@@ -1,0 +1,12 @@
+change: e2e-integration-test
+status: archived
+archive_date: 2026-04-18
+verification: pass
+tests: 27
+coverage: 85-100
+artifacts:
+  - proposal
+  - design
+  - tasks
+  - verify-report
+  - specs

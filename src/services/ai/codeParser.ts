@@ -1,0 +1,76 @@
+import { type ProjectFile } from '../../types';
+
+export interface ParseResult {
+  message: string;
+  files: ProjectFile[];
+  warnings: string[]; // array vacío si no hay issues
+}
+
+export function parseAIResponse(text: string): ParseResult {
+  const warnings: string[] = [];
+  const files: ProjectFile[] = [];
+  const lines = text.split('\n');
+  let currentFile: string | null = null;
+  let currentContent: string[] = [];
+  let isInsideCodeBlock = false;
+  let messageLines: string[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Detect file marker: "File: path/to/file.ext"
+    if (line.trim().startsWith('File:')) {
+      // Save previous file if exists
+      if (currentFile && currentContent.length > 0) {
+        files.push({
+          path: currentFile,
+          content: currentContent.join('\n').trim(),
+        });
+      }
+      currentFile = line.replace('File:', '').trim();
+      currentContent = [];
+      continue;
+    }
+
+    if (line.trim().startsWith('```')) {
+      isInsideCodeBlock = !isInsideCodeBlock;
+      continue;
+    }
+
+    if (currentFile && isInsideCodeBlock) {
+      currentContent.push(line);
+    } else if (!currentFile && !isInsideCodeBlock) {
+      messageLines.push(line);
+    }
+  }
+
+  // Last file
+  if (currentFile && currentContent.length > 0) {
+    files.push({
+      path: currentFile,
+      content: currentContent.join('\n').trim(),
+    });
+  }
+
+  // Validaciones para warnings
+  if (files.length === 0) {
+    warnings.push("No se detectaron archivos en la respuesta del AI");
+  }
+
+  // Verificar si hay paths de archivo vacíos o muy cortos (posible parsing issue)
+  const emptyPaths = files.filter(f => !f.path || f.path.length < 5);
+  if (emptyPaths.length > 0) {
+    warnings.push(`Se detectaron ${emptyPaths.length} archivos con path inválido o muy corto`);
+  }
+
+  const message = messageLines.join('\n').trim();
+  if (!message || message.length < 10) {
+    warnings.push("El mensaje de explicación está vacío o es muy corto");
+  }
+
+  return {
+    message,
+    files,
+    warnings,
+  };
+}

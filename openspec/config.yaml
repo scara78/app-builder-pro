@@ -1,0 +1,36 @@
+# OpenSpec Configuration
+# Project: lovable_clone (App Builder Pro)
+
+project:
+  name: lovable_clone
+  type: web-application
+  description: AI-powered web application builder using React, Vite, WebContainer API, and Gemini API
+
+stack:
+  frontend: React 19.2.14
+  language: TypeScript 6.0.2
+  bundler: Vite 8.0.8
+  editor: Monaco Editor
+  runtime: WebContainer API
+  ai: Gemini API (@google/generative-ai 0.24.1)
+  markdown: react-markdown 10.1.0, remark-gfm 4.0.1
+
+persistence:
+  backend: openspec
+  mode: file-based
+  path: ./openspec
+
+testing:
+  runner: vitest
+  framework: "@testing-library/react"
+  coverage: "@vitest/coverage-v8"
+  environment: jsdom
+  status: not_installed
+
+strict_tdd: true
+
+# Change tracking
+changes:
+  directory: ./openspec/changes
+  active:
+    - pre-production-hardening
