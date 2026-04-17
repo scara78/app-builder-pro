@@ -1,25 +1,37 @@
 /**
- * Supabase MCP Client
- *
- * HTTP client for interacting with Supabase MCP (Model Context Protocol) server.
- * Provides project management operations including creation, configuration,
- * and SQL migration execution.
- *
- * @example
+ * Supabase Services
+ * 
+ * Este módulo exporta dos clientes:
+ * 
+ * 1. SupabaseClient (oficial) - Para operaciones con la base de datos
+ 2. SupabaseMCPClient - Para gestión de proyectos vía MCP
+ * 
+ * @example Uso del cliente oficial
  * ```typescript
- * import { createMCPClient, SupabaseMCPClient } from './services/supabase';
- *
+ * import { supabase } from './services/supabase';
+ * 
+ * const { data, error } = await supabase
+ *   .from('users')
+ *   .select('*');
+ * ```
+ * 
+ * @example Uso del cliente MCP
+ * ```typescript
+ * import { createMCPClient } from './services/supabase';
+ * 
  * const client = createMCPClient({
- *   accessToken: 'your-oauth-token',
- *   baseUrl: 'https://api.supabase.com/mcp'
+ *   accessToken: 'your-oauth-token'
  * });
- *
+ * 
  * const project = await client.createProject('my-app', 'us-east-1');
- * await client.applyMigration(project.ref, 'CREATE TABLE users (id INT);', 'init');
  * ```
  */
 
-// Core client
+// Cliente oficial de Supabase (para queries a la base de datos)
+export { getSupabaseClient, resetSupabaseClient, supabase } from './client';
+export type { SupabaseClient } from './client';
+
+// MCP Client (para gestión de proyectos)
 export { SupabaseMCPClient, createMCPClient } from './MCPClient';
 
 // Error classes
