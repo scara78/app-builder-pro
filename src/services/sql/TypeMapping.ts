@@ -1,6 +1,6 @@
 /**
  * TypeMapping Module
- * 
+ *
  * Converts TypeScript types to PostgreSQL types for SQL schema generation.
  * Provides predictable fallbacks for unknown types.
  */
@@ -34,7 +34,6 @@ export const typeMap: Record<string, string> = {
   [TS_TYPE.BOOLEAN]: PG_TYPE.BOOLEAN,
   [TS_TYPE.DATE]: PG_TYPE.TIMESTAMPTZ,
   'timestamp': PG_TYPE.TIMESTAMPTZ,
-  'Date': PG_TYPE.TIMESTAMPTZ,
   [TS_TYPE.JSON]: PG_TYPE.JSONB,
 };
 
@@ -45,13 +44,13 @@ type Logger = (warning: string) => void;
 
 /**
  * Get the PostgreSQL type for a given TypeScript type.
- * 
+ *
  * @param typescriptType - The TypeScript type to convert
  * @param nullable - Whether the field is optional (nullable)
  * @param logger - Optional custom logger for warnings
  * @returns The corresponding PostgreSQL type
  * @throws TypeError if input is null or undefined
- * 
+ *
  * @example
  * getPostgresType('string') // returns 'TEXT'
  * getPostgresType('number') // returns 'INTEGER'
@@ -85,7 +84,7 @@ export function getPostgresType(
   if (!pgType) {
     pgType = PG_TYPE.TEXT;
     const warning = `Unknown TypeScript type "${typescriptType}", defaulting to TEXT`;
-    
+
     if (logger) {
       logger(warning);
     } else {

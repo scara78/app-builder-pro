@@ -126,7 +126,7 @@ export function useSupabaseMutation<T = any>() {
 
   const insert = useCallback(async (
     table: string,
-    data: Partial<T> | Partial<T>[]
+    data: Record<string, unknown> | Record<string, unknown>[]
   ): Promise<T | null> => {
     setLoading(true);
     setError(null);
@@ -154,7 +154,7 @@ export function useSupabaseMutation<T = any>() {
   const update = useCallback(async (
     table: string,
     id: string,
-    data: Partial<T>
+    data: Record<string, unknown>
   ): Promise<T | null> => {
     setLoading(true);
     setError(null);

@@ -1,9 +1,9 @@
 /**
  * SQL Schema Generator - Public API
- * 
+ *
  * This module exports all public APIs from the SQL schema generator.
  * Use these exports to generate PostgreSQL DDL from backend requirements.
- * 
+ *
  * @example
  * import { SQLGenerator } from '@/services/sql';
  * const generator = new SQLGenerator();
@@ -13,8 +13,8 @@
 export { SQLGenerator } from './SQLGenerator';
 export { MigrationBuilder, build } from './MigrationBuilder';
 
-// Type exports
-export type { MigrationResult, SQLGeneratorConfig, SQLGenerator, TypeMappingConfig, RLSPolicy } from './types';
+// Type exports (nota: ISQLGenerator es la interfaz, SQLGenerator es la clase)
+export type { MigrationResult, SQLGeneratorConfig, SQLGenerator as ISQLGenerator, TypeMappingConfig, RLSPolicy } from './types';
 
 // TypeMapping exports
 export { getPostgresType, typeMap } from './TypeMapping';
