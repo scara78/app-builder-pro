@@ -8,29 +8,29 @@ export type AIModel = {
 };
 
 export const AVAILABLE_MODELS: AIModel[] = [
-  { 
-    id: 'gemini-2.0-flash', 
-    name: 'Gemini 2.0 Flash', 
-    description: 'Stable 2.0 model with excellent free tier availability.', 
-    isHighAvailability: true 
+  {
+    id: 'gemini-2.5-flash',
+    name: 'Gemini 2.5 Flash',
+    description: 'Next gen fast model, perfect for rapid app iteration.',
+    isHighAvailability: true
   },
-  { 
-    id: 'gemini-2.5-flash-lite', 
-    name: 'Gemini 2.5 Flash Lite', 
-    description: 'Fastest & most budget-friendly. Great for simple apps.', 
-    isHighAvailability: true 
+  {
+    id: 'gemini-2.5-flash-lite',
+    name: 'Gemini 2.5 Flash Lite',
+    description: 'Fastest & most budget-friendly. Great for simple apps.',
+    isHighAvailability: true
   },
-  { 
-    id: 'gemini-2.5-flash', 
-    name: 'Gemini 2.5 Flash', 
-    description: 'Next gen fast model, perfect for rapid app iteration.', 
-    isHighAvailability: false 
+  {
+    id: 'gemini-2.0-flash',
+    name: 'Gemini 2.0 Flash',
+    description: 'Stable 2.0 model. Note: May have limited quota in some regions.',
+    isHighAvailability: false
   },
-  { 
-    id: 'gemini-2.5-pro', 
-    name: 'Gemini 2.5 Pro', 
-    description: 'Highest intelligence for complex coding logic.', 
-    isHighAvailability: false 
+  {
+    id: 'gemini-2.5-pro',
+    name: 'Gemini 2.5 Pro',
+    description: 'Highest intelligence for complex coding logic.',
+    isHighAvailability: false
   },
 ];
 
@@ -45,11 +45,14 @@ interface SettingsContextType {
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [apiKey, setApiKeyState] = useState<string>(() => sessionStorage.getItem('app-builder-api-key') || '');
+  const [apiKey, setApiKeyState] = useState<string>(
+    () => sessionStorage.getItem('app-builder-api-key') || ''
+  );
+
   const [modelId, setModelIdState] = useState<string>(() => {
     const saved = sessionStorage.getItem('app-builder-model-id');
     const isValid = AVAILABLE_MODELS.some(m => m.id === saved);
-    return isValid && saved ? saved : 'gemini-2.0-flash';
+    return isValid && saved ? saved : 'gemini-2.5-flash';
   });
 
   useEffect(() => {
@@ -68,7 +71,15 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   return (
-    <SettingsContext.Provider value={{ apiKey, modelId, setApiKey, setModelId, getEffectiveApiKey }}>
+    <SettingsContext.Provider
+      value={{
+        apiKey,
+        modelId,
+        setApiKey,
+        setModelId,
+        getEffectiveApiKey,
+      }}
+    >
       {children}
     </SettingsContext.Provider>
   );
