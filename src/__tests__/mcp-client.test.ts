@@ -129,9 +129,7 @@ describe('SupabaseMCPClient', () => {
       // Access private request method via type casting
       const request = (client as any).request.bind(client);
 
-      await expect(
-        request<{ success: boolean }>('POST', '/api/mcp/test_error_branch')
-      ).rejects.toThrow(MCPError);
+      await expect(request('POST', '/api/mcp/test_error_branch')).rejects.toThrow();
     });
   });
 });

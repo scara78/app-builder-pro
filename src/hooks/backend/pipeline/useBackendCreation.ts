@@ -88,7 +88,7 @@ import type { Region } from '../../../services/supabase/types';
  * - `abort` - Cancel current pipeline execution
  */
 export function useBackendCreation() {
-// State management (T3.2)
+  // State management (T3.2)
   const [stage, setStage] = useState<PipelineStage>(PipelineStage.IDLE);
   const [progress, setProgress] = useState<number>(0);
   const [isCreating, setIsCreating] = useState<boolean>(false);
@@ -98,186 +98,201 @@ export function useBackendCreation() {
   // Requirements state (RA-001)
   const [requirements, setRequirements] = useState<BackendRequirements | null>(null);
 
-// Store last code and options for retry
-const [lastCode, setLastCode] = useState<string>('');
-const [lastOptions, setLastOptions] = useState<BackendCreationOptions>({});
+  // Store last code and options for retry
+  const [lastCode, setLastCode] = useState<string>('');
+  const [lastOptions, setLastOptions] = useState<BackendCreationOptions>({});
 
-// AbortController ref for cancellation
-const abortControllerRef = useRef<AbortController | null>(null);
+  // AbortController ref for cancellation
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // OAuth for getting access token
   const { getToken, isAuthenticated } = useSupabaseOAuth();
 
-/**
-	 * Updates both stage and progress atomically.
-	 * @param newStage - The target pipeline stage
-	 * @param newProgress - The progress percentage (0-100)
-	 */
-	const updateStage = useCallback((newStage: PipelineStage, newProgress: number) => {
+  /**
+   * Updates both stage and progress atomically.
+   * @param newStage - The target pipeline stage
+   * @param newProgress - The progress percentage (0-100)
+   */
+  const updateStage = useCallback((newStage: PipelineStage, newProgress: number) => {
     setStage(newStage);
     setProgress(newProgress);
   }, []);
 
-/**
-	 * Executes the full backend creation pipeline.
-	 *
-	 * The pipeline runs through 4 stages:
-	 * 1. ANALYZING (25%) - Detect backend requirements from code
-	 * 2. GENERATING (50%) - Generate SQL migration
-	 * 3. CREATING_PROJECT (75%) - Create Supabase project
-	 * 4. APPLYING_MIGRATION (100%) - Apply SQL migration
-	 *
-	 * @param code - The generated React code to analyze
-	 * @param options - Creation options including projectName, region, and enableRLS
-	 *
-	 * @example
-	 * ```tsx
-	 * await createBackend(code, {
-	 *   projectName: 'my-app',
-	 *   region: 'us-east-1',
-	 *   enableRLS: true
-	 * });
-	 * ```
-	 */
-	const createBackend = useCallback(async (code: string, options: BackendCreationOptions = {}) => {
-    // Abort any previous pipeline execution
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    abortControllerRef.current = new AbortController();
-    const signal = abortControllerRef.current.signal;
+  /**
+   * Executes the full backend creation pipeline.
+   *
+   * The pipeline runs through 4 stages:
+   * 1. ANALYZING (25%) - Detect backend requirements from code
+   * 2. GENERATING (50%) - Generate SQL migration
+   * 3. CREATING_PROJECT (75%) - Create Supabase project
+   * 4. APPLYING_MIGRATION (100%) - Apply SQL migration
+   *
+   * @param code - The generated React code to analyze
+   * @param options - Creation options including projectName, region, and enableRLS
+   *
+   * @example
+   * ```tsx
+   * await createBackend(code, {
+   *   projectName: 'my-app',
+   *   region: 'us-east-1',
+   *   enableRLS: true
+   * });
+   * ```
+   */
+  const createBackend = useCallback(
+    async (code: string, options: BackendCreationOptions = {}) => {
+      // Abort any previous pipeline execution
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      abortControllerRef.current = new AbortController();
+      const signal = abortControllerRef.current.signal;
 
-    // Store for retry functionality
-    setLastCode(code);
-    setLastOptions(options);
+      // Store for retry functionality
+      setLastCode(code);
+      setLastOptions(options);
 
-    // Check authentication first
-    if (!isAuthenticated) {
-      setStage(PipelineStage.ERROR);
-      setError('Authentication required. Please log in with Supabase OAuth.');
-      setIsCreating(false);
-      return;
-    }
+      // Check authentication first
+      if (!isAuthenticated) {
+        setStage(PipelineStage.ERROR);
+        setError('Authentication required. Please log in with Supabase OAuth.');
+        setIsCreating(false);
+        return;
+      }
 
-    const token = getToken();
-    if (!token) {
-      setStage(PipelineStage.ERROR);
-      setError('Authentication required. Please log in with Supabase OAuth.');
-      setIsCreating(false);
-      return;
-    }
+      const token = getToken();
+      if (!token) {
+        setStage(PipelineStage.ERROR);
+        setError('Authentication required. Please log in with Supabase OAuth.');
+        setIsCreating(false);
+        return;
+      }
 
-    // Initialize services
-    const analyzer = new BackendRequirementsAnalyzer();
-    const generator = new SQLGenerator({ enableRLS: options.enableRLS ?? true });
-    const mcpClient = new SupabaseMCPClient({ accessToken: token });
+      // Initialize services
+      const analyzer = new BackendRequirementsAnalyzer();
+      const generator = new SQLGenerator({ enableRLS: options.enableRLS ?? true });
+      const mcpClient = new SupabaseMCPClient({ accessToken: token });
 
-    // Set up project name and region
-    const projectName = options.projectName || `backend-${Date.now()}`;
-    const region = (options.region as Region) || 'us-east-1';
+      // Set up project name and region
+      const projectName = options.projectName || `backend-${Date.now()}`;
+      const region = (options.region as Region) || 'us-east-1';
 
-    try {
-      setIsCreating(true);
-      setError(null);
-
-// ====== STAGE 1: Analyze (25%) ======
-    updateStage(PipelineStage.ANALYZING, 25);
-    let requirements: BackendRequirements;
-    try {
-      // Check for abort before async operation
-      if (signal.aborted) throw new Error('Pipeline aborted');
-      requirements = await analyzer.analyze(code);
-      if (signal.aborted) throw new Error('Pipeline aborted');
-
-      // Store requirements in state (RA-001)
-      setRequirements(requirements);
-    } catch (err) {
-      if (signal.aborted) throw new Error('Pipeline aborted');
-      throw new Error(`Analysis failed: ${err instanceof Error ? err.message : 'Unknown error'}`, { cause: err });
-    }
-
-      // ====== STAGE 2: Generate (50%) ======
-      updateStage(PipelineStage.GENERATING, 50);
-      let migrationResult: MigrationResult;
       try {
-        // Check for abort before sync operation
-        if (signal.aborted) throw new Error('Pipeline aborted');
-        migrationResult = generator.generate(requirements);
-} catch (err) {
-      if (signal.aborted) throw new Error('Pipeline aborted');
-      throw new Error(`SQL generation failed: ${err instanceof Error ? err.message : 'Unknown error'}`, { cause: err });
-    }
+        setIsCreating(true);
+        setError(null);
 
-      // ====== STAGE 3: Create Project (75%) ======
-      updateStage(PipelineStage.CREATING_PROJECT, 75);
-      let project;
-      try {
-        if (signal.aborted) throw new Error('Pipeline aborted');
-        project = await mcpClient.createProject(projectName, region);
-        if (signal.aborted) throw new Error('Pipeline aborted');
-} catch (err) {
-      if (signal.aborted) throw new Error('Pipeline aborted');
-      throw new Error(`Project creation failed: ${err instanceof Error ? err.message : 'Unknown error'}`, { cause: err });
-    }
+        // ====== STAGE 1: Analyze (25%) ======
+        updateStage(PipelineStage.ANALYZING, 25);
+        let requirements: BackendRequirements;
+        try {
+          // Check for abort before async operation
+          if (signal.aborted) throw new Error('Pipeline aborted');
+          requirements = await analyzer.analyze(code);
+          if (signal.aborted) throw new Error('Pipeline aborted');
 
-      // ====== STAGE 4: Apply Migration (100%) ======
-      updateStage(PipelineStage.APPLYING_MIGRATION, 100);
-      const migrationName = 'initial_schema';
-      try {
-        if (signal.aborted) throw new Error('Pipeline aborted');
-        await mcpClient.applyMigration(project.ref, migrationResult.sql, migrationName);
-        if (signal.aborted) throw new Error('Pipeline aborted');
-} catch (err) {
-      if (signal.aborted) throw new Error('Pipeline aborted');
-      throw new Error(`Migration failed: ${err instanceof Error ? err.message : 'Unknown error'}`, { cause: err });
-    }
+          // Store requirements in state (RA-001)
+          setRequirements(requirements);
+        } catch (err) {
+          if (signal.aborted) throw new Error('Pipeline aborted', { cause: err });
+          throw new Error(
+            `Analysis failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
+            { cause: err }
+          );
+        }
 
-      // Get project URL and anon key
-      let projectUrl: string;
-      let anonKey: string;
-      try {
-        if (signal.aborted) throw new Error('Pipeline aborted');
-        projectUrl = await mcpClient.getProjectUrl(project.ref);
-        anonKey = await mcpClient.getAnonKey(project.ref);
-} catch (_err) {
-      if (signal.aborted) throw new Error('Pipeline aborted');
-      // Fallback URL if unable to fetch
-      projectUrl = `https://${project.ref}.supabase.co`;
-      anonKey = 'Unable to fetch anon key';
-    }
+        // ====== STAGE 2: Generate (50%) ======
+        updateStage(PipelineStage.GENERATING, 50);
+        let migrationResult: MigrationResult;
+        try {
+          // Check for abort before sync operation
+          if (signal.aborted) throw new Error('Pipeline aborted');
+          migrationResult = generator.generate(requirements);
+        } catch (err) {
+          if (signal.aborted) throw new Error('Pipeline aborted', { cause: err });
+          throw new Error(
+            `SQL generation failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
+            { cause: err }
+          );
+        }
 
-      // Set final result
-      setResult({
-        projectUrl,
-        anonKey,
-        projectName: project.name,
-        migrationName,
-      });
+        // ====== STAGE 3: Create Project (75%) ======
+        updateStage(PipelineStage.CREATING_PROJECT, 75);
+        let project;
+        try {
+          if (signal.aborted) throw new Error('Pipeline aborted');
+          project = await mcpClient.createProject(projectName, region);
+          if (signal.aborted) throw new Error('Pipeline aborted');
+        } catch (err) {
+          if (signal.aborted) throw new Error('Pipeline aborted', { cause: err });
+          throw new Error(
+            `Project creation failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
+            { cause: err }
+          );
+        }
 
-      setStage(PipelineStage.COMPLETE);
-      setIsCreating(false);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
-      setError(errorMessage);
-      setStage(PipelineStage.ERROR);
-      setIsCreating(false);
-    }
-  }, [getToken, isAuthenticated, updateStage]);
+        // ====== STAGE 4: Apply Migration (100%) ======
+        updateStage(PipelineStage.APPLYING_MIGRATION, 100);
+        const migrationName = 'initial_schema';
+        try {
+          if (signal.aborted) throw new Error('Pipeline aborted');
+          await mcpClient.applyMigration(project.ref, migrationResult.sql, migrationName);
+          if (signal.aborted) throw new Error('Pipeline aborted');
+        } catch (err) {
+          if (signal.aborted) throw new Error('Pipeline aborted', { cause: err });
+          throw new Error(
+            `Migration failed: ${err instanceof Error ? err.message : 'Unknown error'}`,
+            { cause: err }
+          );
+        }
 
-/**
-	 * Retries the pipeline from the beginning using the last code and options.
-	 * Only works when the current stage is ERROR.
-	 *
-	 * @returns true if retry was initiated, false if not in error state or no last code
-	 *
-	 * @example
-	 * ```tsx
-	 * if (stage === PipelineStage.ERROR) {
-	 *   retry(); // Re-runs pipeline with stored code/options
-	 * }
-	 * ```
-	 */
-	const retry = useCallback((): boolean => {
+        // Get project URL and anon key
+        let projectUrl: string;
+        let anonKey: string;
+        try {
+          if (signal.aborted) throw new Error('Pipeline aborted');
+          projectUrl = await mcpClient.getProjectUrl(project.ref);
+          anonKey = await mcpClient.getAnonKey(project.ref);
+        } catch (err) {
+          if (signal.aborted) throw new Error('Pipeline aborted', { cause: err });
+          // Fallback URL if unable to fetch
+          projectUrl = `https://${project.ref}.supabase.co`;
+          anonKey = 'Unable to fetch anon key';
+        }
+
+        // Set final result
+        setResult({
+          projectUrl,
+          anonKey,
+          projectName: project.name,
+          migrationName,
+        });
+
+        setStage(PipelineStage.COMPLETE);
+        setIsCreating(false);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+        setError(errorMessage);
+        setStage(PipelineStage.ERROR);
+        setIsCreating(false);
+      }
+    },
+    [getToken, isAuthenticated, updateStage]
+  );
+
+  /**
+   * Retries the pipeline from the beginning using the last code and options.
+   * Only works when the current stage is ERROR.
+   *
+   * @returns true if retry was initiated, false if not in error state or no last code
+   *
+   * @example
+   * ```tsx
+   * if (stage === PipelineStage.ERROR) {
+   *   retry(); // Re-runs pipeline with stored code/options
+   * }
+   * ```
+   */
+  const retry = useCallback((): boolean => {
     if (stage !== PipelineStage.ERROR) {
       return false;
     }
@@ -290,12 +305,12 @@ const abortControllerRef = useRef<AbortController | null>(null);
     return false;
   }, [stage, lastCode, lastOptions, createBackend]);
 
-/**
-	 * Resets all pipeline state to initial values.
-	 * Clears stage, progress, error, result, and stored code/options.
-	 * Use this to prepare for a new backend creation session.
-	 */
-	const reset = useCallback(() => {
+  /**
+   * Resets all pipeline state to initial values.
+   * Clears stage, progress, error, result, and stored code/options.
+   * Use this to prepare for a new backend creation session.
+   */
+  const reset = useCallback(() => {
     setStage(PipelineStage.IDLE);
     setProgress(0);
     setIsCreating(false);
@@ -306,19 +321,19 @@ const abortControllerRef = useRef<AbortController | null>(null);
     setLastOptions({});
   }, []);
 
-/**
-	 * Aborts the current pipeline execution.
-	 * Cancels any in-progress operations and returns to IDLE state.
-	 *
-	 * @returns true if abort was triggered, false if no pipeline is running
-	 *
-	 * @example
-	 * ```tsx
-	 * // In a modal with cancel button
-	 * <button onClick={abort}>Cancel</button>
-	 * ```
-	 */
-	const abort = useCallback((): boolean => {
+  /**
+   * Aborts the current pipeline execution.
+   * Cancels any in-progress operations and returns to IDLE state.
+   *
+   * @returns true if abort was triggered, false if no pipeline is running
+   *
+   * @example
+   * ```tsx
+   * // In a modal with cancel button
+   * <button onClick={abort}>Cancel</button>
+   * ```
+   */
+  const abort = useCallback((): boolean => {
     if (abortControllerRef.current && isCreating) {
       abortControllerRef.current.abort();
       setStage(PipelineStage.IDLE);

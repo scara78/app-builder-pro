@@ -22,26 +22,23 @@ const createMockResponse = (text: string) => ({
   },
 });
 
-// Store original env
-const originalEnv = { ...import.meta.env };
-
 describe('AIOrchestrator', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    
-    // Set test API key
-    import.meta.env.VITE_GEMINI_API_KEY = 'test-api-key';
-    
+
+    // Set test API key using vi.stubEnv
+    vi.stubEnv('VITE_GEMINI_API_KEY', 'test-api-key');
+
     // Reset singleton instance
     (AIOrchestrator as any).instance = null;
-    
+
     // Reset quota manager
     quotaManager.resetErrors();
     quotaManager.setConfig({ maxRequestsPerMinute: 15 });
   });
 
   afterEach(() => {
-    import.meta.env = { ...originalEnv };
+    vi.unstubAllEnvs();
     vi.clearAllMocks();
     (AIOrchestrator as any).instance = null;
   });
@@ -106,7 +103,7 @@ function App() {}
       expect(contents[1]).toContain('Create a simple app');
     });
 
-it('throws error when no API key is configured', async () => {
+    it('throws error when no API key is configured', async () => {
       // Given - simulate no API key by making genAI null on a fresh instance
       // We test the behavior: when genAI is null, should throw specific error
       const instanceWithoutKey = Object.create(AIOrchestrator.prototype);
@@ -126,9 +123,7 @@ it('throws error when no API key is configured', async () => {
       const orchestrator = AIOrchestrator.getInstance();
 
       // When/Then
-      await expect(orchestrator.generateApp('Create app')).rejects.toThrow(
-        /Quota Guard/
-      );
+      await expect(orchestrator.generateApp('Create app')).rejects.toThrow(/Quota Guard/);
     });
 
     it('throws error when API call fails', async () => {
@@ -179,9 +174,9 @@ export default App;
       const existingFiles = [{ path: 'src/App.tsx', content: 'test' }];
 
       // When/Then
-      await expect(
-        instanceWithoutKey.refineApp(existingFiles, 'Change something')
-      ).rejects.toThrow('Gemini API Key not found');
+      await expect(instanceWithoutKey.refineApp(existingFiles, 'Change something')).rejects.toThrow(
+        'Gemini API Key not found'
+      );
     });
 
     it('throws error when quota is exceeded', async () => {
@@ -192,18 +187,14 @@ export default App;
       const existingFiles = [{ path: 'src/App.tsx', content: 'test' }];
 
       // When/Then
-      await expect(
-        orchestrator.refineApp(existingFiles, 'Change')
-      ).rejects.toThrow(/Quota Guard/);
+      await expect(orchestrator.refineApp(existingFiles, 'Change')).rejects.toThrow(/Quota Guard/);
     });
   });
 
   describe('testConnection', () => {
     it('returns connection test result', async () => {
       // Given
-      mockGenerateContent.mockResolvedValueOnce(
-        createMockResponse('Connection Successful')
-      );
+      mockGenerateContent.mockResolvedValueOnce(createMockResponse('Connection Successful'));
 
       const orchestrator = AIOrchestrator.getInstance();
 
@@ -221,9 +212,7 @@ export default App;
       (instanceWithoutKey as any).modelId = 'gemini-2.5-flash';
 
       // When/Then
-      await expect(instanceWithoutKey.testConnection()).rejects.toThrow(
-        'No API Key configured'
-      );
+      await expect(instanceWithoutKey.testConnection()).rejects.toThrow('No API Key configured');
     });
 
     it('throws error when API call fails', async () => {
@@ -313,9 +302,7 @@ function App() {}
   describe('edge cases', () => {
     it('handles empty file list in refineApp', async () => {
       // Given
-      mockGenerateContent.mockResolvedValueOnce(
-        createMockResponse('No changes needed')
-      );
+      mockGenerateContent.mockResolvedValueOnce(createMockResponse('No changes needed'));
 
       const orchestrator = AIOrchestrator.getInstance();
 
@@ -368,7 +355,7 @@ import App from './App';
       const result = await orchestrator.generateApp('Create full app');
 
       // Then
-      expect(result.files.length).toBeGreaterThanOrEqual(3);
+      expect(result.files?.length).toBeGreaterThanOrEqual(3);
     });
   });
 });

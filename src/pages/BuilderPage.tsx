@@ -45,6 +45,7 @@ const BuilderPageInner: React.FC<BuilderPageProps> = ({ initialPrompt }) => {
   const [isBackendModalOpen, setIsBackendModalOpen] = useState(false);
   const [showCredentialsModal, setShowCredentialsModal] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
+  const [_applyError, setApplyError] = useState<string | null>(null);
   const { getEffectiveApiKey, modelId } = useSettings();
   const { showToast } = useToast();
 
@@ -116,13 +117,13 @@ const BuilderPageInner: React.FC<BuilderPageProps> = ({ initialPrompt }) => {
         } else {
           setBuilderState('idle');
         }
-} catch (error) {
-      console.error('Build error:', error);
-      setBuilderState('error');
-    }
-  },
-  [generate, mount, install, runDev, getEffectiveApiKey, modelId, resetBackend]
-);
+      } catch (error) {
+        console.error('Build error:', error);
+        setBuilderState('error');
+      }
+    },
+    [generate, mount, install, runDev, getEffectiveApiKey, modelId, resetBackend]
+  );
 
   // Initialize build with prompt - only once
   useEffect(() => {
@@ -147,9 +148,7 @@ const BuilderPageInner: React.FC<BuilderPageProps> = ({ initialPrompt }) => {
     if (currentFiles.length === 0) return;
 
     // Convert files to code string for analysis
-    const codeString = currentFiles
-      .map((f) => `// ${f.path}\n${f.content}`)
-      .join('\n\n');
+    const codeString = currentFiles.map((f) => `// ${f.path}\n${f.content}`).join('\n\n');
 
     await createBackend(codeString, {
       projectName: 'generated-backend',
@@ -226,7 +225,9 @@ const BuilderPageInner: React.FC<BuilderPageProps> = ({ initialPrompt }) => {
       if (adapted.skipped) {
         console.log('Backend adaptation skipped:', adapted.reason);
         showToast({
-          message: adapted.reason || 'No backend integration needed - the generated code doesn\'t use Supabase features.',
+          message:
+            adapted.reason ||
+            "No backend integration needed - the generated code doesn't use Supabase features.",
           type: 'info',
         });
         return; // Keep modal open

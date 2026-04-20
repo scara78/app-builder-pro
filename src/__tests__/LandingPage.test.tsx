@@ -24,7 +24,7 @@ function elementExists(selector: string): boolean {
 }
 
 // Helper to get text content
-function getTextContent(selector: string): string | null {
+function getTextContent(selector: string): string | null | undefined {
   const el = document.querySelector(selector);
   return el?.textContent;
 }
@@ -163,7 +163,9 @@ describe('LandingPage', () => {
     it('fills prompt when example chip is clicked', () => {
       // Given
       render(<LandingPage onStartBuild={mockOnStartBuild} />);
-      const input = screen.getByPlaceholderText(/What do you want to build today?/i) as HTMLInputElement;
+      const input = screen.getByPlaceholderText(
+        /What do you want to build today?/i
+      ) as HTMLInputElement;
 
       // When - User clicks example chip
       const exampleChip = screen.getByText(/A modern SaaS dashboard with dark mode/i);
@@ -208,7 +210,9 @@ describe('LandingPage', () => {
       render(<LandingPage onStartBuild={mockOnStartBuild} />);
 
       // When/Then - Input exists with correct placeholder
-      const input = document.querySelector('input[placeholder*="What do you want to build"]') as HTMLInputElement;
+      const input = document.querySelector(
+        'input[placeholder*="What do you want to build"]'
+      ) as HTMLInputElement;
       expect(input).not.toBeNull();
       expect(input?.getAttribute('type')).toBe('text');
     });
