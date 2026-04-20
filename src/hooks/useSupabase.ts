@@ -2,43 +2,43 @@
  * Hook para usar Supabase en componentes React
  * Proporciona acceso al cliente y helpers comunes
  *
- * NOTE: This hook requires a Supabase client to be configured.
- * Currently used for testing purposes only.
- * For production, use useSupabaseOAuth from '@/hooks/backend/oauth'.
+ * NOTE: This hook requires a Supabase client to be provided.
+ * For production OAuth flow, use useSupabaseOAuth from '@/hooks/backend/oauth'.
+ *
+ * @param externalClient - Optional Supabase client (useful for testing with mocks)
  */
 
 import { useEffect, useState, useCallback } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-// Placeholder - in production, this would be a real Supabase client
-// Currently this hook is only used in tests with mocks
-const supabase = null as unknown as SupabaseClient;
-
 interface UseSupabaseReturn {
-  client: SupabaseClient;
+  client: SupabaseClient | null;
   isReady: boolean;
   error: Error | null;
 }
 
 /**
  * Hook para obtener el cliente de Supabase
- * Asegura que el cliente esté inicializado antes de usarlo
+ * @param externalClient - Optional client to use (for dependency injection in tests)
  */
-export function useSupabase(): UseSupabaseReturn {
+export function useSupabase(externalClient?: SupabaseClient): UseSupabaseReturn {
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
     try {
-      // El cliente ya se inicializa en el import
-      setIsReady(true);
+      if (externalClient) {
+        setIsReady(true);
+      } else {
+        setError(new Error('No Supabase client provided'));
+      }
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to initialize Supabase'));
     }
-  }, []);
+  }, [externalClient]);
 
   return {
-    client: supabase,
+    client: externalClient ?? null,
     isReady,
     error,
   };
@@ -50,6 +50,7 @@ interface UseSupabaseQueryOptions {
   filters?: (query: any) => any;
   orderBy?: { column: string; ascending?: boolean };
   limit?: number;
+  client?: SupabaseClient; // Optional client for dependency injection
 }
 
 interface UseSupabaseQueryReturn<T> {
@@ -62,6 +63,7 @@ interface UseSupabaseQueryReturn<T> {
 /**
  * Hook para hacer queries a Supabase
  * Simplifica el uso de select con filtros
+ * @param options - Query options including optional client for testing
  */
 export function useSupabaseQuery<T = any>(
   options: UseSupabaseQueryOptions
@@ -69,11 +71,17 @@ export function useSupabaseQuery<T = any>(
   const [data, setData] = useState<T[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const { client } = useSupabase();
+  const { client } = useSupabase(options.client);
 
   const fetch = useCallback(async () => {
     setLoading(true);
     setError(null);
+
+    if (!client) {
+      setError(new Error('No Supabase client available'));
+      setLoading(false);
+      return;
+    }
 
     try {
       let query = client.from(options.table).select(options.select || '*');
@@ -121,13 +129,18 @@ export function useSupabaseQuery<T = any>(
   };
 }
 
+interface UseSupabaseMutationOptions {
+  client?: SupabaseClient; // Optional client for dependency injection
+}
+
 /**
  * Hook para operaciones de insert/update/delete
+ * @param options - Options including optional client for testing
  */
-export function useSupabaseMutation<T = any>() {
+export function useSupabaseMutation<T = any>(options?: UseSupabaseMutationOptions) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const { client } = useSupabase();
+  const { client } = useSupabase(options?.client);
 
   const insert = useCallback(
     async (
@@ -136,6 +149,12 @@ export function useSupabaseMutation<T = any>() {
     ): Promise<T | null> => {
       setLoading(true);
       setError(null);
+
+      if (!client) {
+        setError(new Error('No Supabase client available'));
+        setLoading(false);
+        return null;
+      }
 
       try {
         const { data: result, error: insertError } = await client
@@ -164,6 +183,12 @@ export function useSupabaseMutation<T = any>() {
       setLoading(true);
       setError(null);
 
+      if (!client) {
+        setError(new Error('No Supabase client available'));
+        setLoading(false);
+        return null;
+      }
+
       try {
         const { data: result, error: updateError } = await client
           .from(table)
@@ -191,6 +216,12 @@ export function useSupabaseMutation<T = any>() {
     async (table: string, id: string): Promise<boolean> => {
       setLoading(true);
       setError(null);
+
+      if (!client) {
+        setError(new Error('No Supabase client available'));
+        setLoading(false);
+        return false;
+      }
 
       try {
         const { error: deleteError } = await client.from(table).delete().eq('id', id);

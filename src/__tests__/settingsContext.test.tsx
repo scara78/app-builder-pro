@@ -14,15 +14,16 @@ describe('SettingsContext', () => {
     sessionStorage.clear();
   });
 
-  // SEC-01: Memory-only state (updated test)
-  it('should use memory-only state (no sessionStorage)', async () => {
+  // SEC-01: Memory-only state for API key (updated test)
+  it('should use memory-only state for API key (no sessionStorage)', async () => {
     sessionStorage.setItem('app-builder-api-key', 'old-session-key');
     render(
       <SettingsProvider>
         <TestComponent />
       </SettingsProvider>
     );
-    // Verify sessionStorage is NOT called - using memory only
-    expect(sessionStorage.getItem).not.toHaveBeenCalled();
+    // Verify sessionStorage.getItem is NOT called for api-key
+    // Note: modelId may use sessionStorage, but API key must NOT
+    expect(sessionStorage.getItem).not.toHaveBeenCalledWith('app-builder-api-key');
   });
 });

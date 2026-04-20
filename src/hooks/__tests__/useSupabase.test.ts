@@ -1,50 +1,44 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { useSupabase, useSupabaseQuery, useSupabaseMutation } from '../useSupabase';
 
 // Factory function for creating mock client
-const createMockClient = () => ({
-  from: vi.fn((table: string) => {
-    const baseQuery = {
-      select: vi.fn().mockResolvedValue({ data: [], error: null }),
-      insert: vi.fn().mockReturnValue({
-        select: vi.fn().mockResolvedValue({ data: null, error: null }),
-        single: vi.fn().mockResolvedValue({ data: null, error: null }),
-      }),
-      update: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
+const createMockClient = (): SupabaseClient =>
+  ({
+    from: vi.fn((table: string) => {
+      const baseQuery = {
+        select: vi.fn().mockResolvedValue({ data: [], error: null }),
+        insert: vi.fn().mockReturnValue({
           select: vi.fn().mockResolvedValue({ data: null, error: null }),
           single: vi.fn().mockResolvedValue({ data: null, error: null }),
         }),
-      }),
-      delete: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnValue({
-          delete: vi.fn().mockResolvedValue({ error: null }),
+        update: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            select: vi.fn().mockResolvedValue({ data: null, error: null }),
+            single: vi.fn().mockResolvedValue({ data: null, error: null }),
+          }),
         }),
-      }),
-      eq: vi.fn().mockResolvedValue({ data: null, error: null }),
-      order: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockReturnThis(),
-    };
-    return baseQuery;
-  }),
-  auth: {
-    getSession: vi.fn(),
-    onAuthStateChange: vi.fn(),
-  },
-});
-
-// Track mock state
-let mockClient: ReturnType<typeof createMockClient> = createMockClient();
-
-// Mock the module - use a factory that returns a getter
-vi.mock('../../services/supabase', () => ({
-  get supabase() {
-    return mockClient;
-  },
-}));
+        delete: vi.fn().mockReturnValue({
+          eq: vi.fn().mockReturnValue({
+            delete: vi.fn().mockResolvedValue({ error: null }),
+          }),
+        }),
+        eq: vi.fn().mockResolvedValue({ data: null, error: null }),
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+      };
+      return baseQuery;
+    }),
+    auth: {
+      getSession: vi.fn(),
+      onAuthStateChange: vi.fn(),
+    },
+  }) as unknown as SupabaseClient;
 
 describe('useSupabase', () => {
+  let mockClient: SupabaseClient;
+
   beforeEach(() => {
     mockClient = createMockClient();
     vi.clearAllMocks();
@@ -54,7 +48,7 @@ describe('useSupabase', () => {
   it('initializes with client and ready state', () => {
     // Given
     // When
-    const { result } = renderHook(() => useSupabase());
+    const { result } = renderHook(() => useSupabase(mockClient));
 
     // Then
     expect(result.current.isReady).toBe(true);
@@ -63,12 +57,10 @@ describe('useSupabase', () => {
   });
 
   // ============ RED - Test: Returns expected interface ============
-  // NOTE: This test is skipped because useSupabase hook has hardcoded null client
-  // The hook needs to be refactored to use the supabase module for this test to work
-  it.skip('returns expected interface with client, isReady, error', () => {
+  it('returns expected interface with client, isReady, error', () => {
     // Given
     // When
-    const { result } = renderHook(() => useSupabase());
+    const { result } = renderHook(() => useSupabase(mockClient));
 
     // Then - verify all expected properties exist
     expect(result.current).toHaveProperty('client');
@@ -79,9 +71,9 @@ describe('useSupabase', () => {
   });
 });
 
-// NOTE: The following tests are skipped because useSupabase hook has hardcoded null client
-// The hook needs to be refactored to use the supabase module for these tests to work
-describe.skip('useSupabaseQuery', () => {
+describe('useSupabaseQuery', () => {
+  let mockClient: SupabaseClient;
+
   beforeEach(() => {
     mockClient = createMockClient();
     vi.clearAllMocks();
@@ -93,6 +85,7 @@ describe.skip('useSupabaseQuery', () => {
     const options = {
       table: 'users',
       select: 'id, name',
+      client: mockClient,
     };
 
     // Mock the select chain to return data
@@ -101,9 +94,7 @@ describe.skip('useSupabaseQuery', () => {
       error: null,
     });
 
-    mockClient.from.mockReturnValue({
-      select: mockSelect,
-    } as any);
+    (mockClient.from as any).mockReturnValue({ select: mockSelect });
 
     // When
     const { result } = renderHook(() => useSupabaseQuery(options));
@@ -126,15 +117,14 @@ describe.skip('useSupabaseQuery', () => {
       error: null,
     });
 
-    mockClient.from.mockReturnValue({
-      select: mockSelect,
-    } as any);
+    (mockClient.from as any).mockReturnValue({ select: mockSelect });
 
     // When
     const { result } = renderHook(() =>
       useSupabaseQuery({
         table: 'users',
         select: '*',
+        client: mockClient,
       })
     );
 
@@ -156,14 +146,13 @@ describe.skip('useSupabaseQuery', () => {
       error: queryError,
     });
 
-    mockClient.from.mockReturnValue({
-      select: mockSelect,
-    } as any);
+    (mockClient.from as any).mockReturnValue({ select: mockSelect });
 
     // When
     const { result } = renderHook(() =>
       useSupabaseQuery({
         table: 'users',
+        client: mockClient,
       })
     );
 
@@ -182,14 +171,13 @@ describe.skip('useSupabaseQuery', () => {
       data: [{ id: '1' }],
       error: null,
     });
-    mockClient.from.mockReturnValue({
-      select: mockSelect,
-    } as any);
+    (mockClient.from as any).mockReturnValue({ select: mockSelect });
 
     // When
     const { result } = renderHook(() =>
       useSupabaseQuery({
         table: 'users',
+        client: mockClient,
       })
     );
 
@@ -207,9 +195,9 @@ describe.skip('useSupabaseQuery', () => {
   });
 });
 
-// NOTE: The following tests are skipped because useSupabase hook has hardcoded null client
-// The hook needs to be refactored to use the supabase module for these tests to work
-describe.skip('useSupabaseMutation', () => {
+describe('useSupabaseMutation', () => {
+  let mockClient: SupabaseClient;
+
   beforeEach(() => {
     mockClient = createMockClient();
     vi.clearAllMocks();
@@ -219,7 +207,7 @@ describe.skip('useSupabaseMutation', () => {
   it('initializes with insert, update, remove functions and loading state', () => {
     // Given
     // When
-    const { result } = renderHook(() => useSupabaseMutation());
+    const { result } = renderHook(() => useSupabaseMutation({ client: mockClient }));
 
     // Then
     expect(result.current.loading).toBe(false);
@@ -235,15 +223,15 @@ describe.skip('useSupabaseMutation', () => {
     const insertData = { name: 'New User' };
 
     // Mock returns data: undefined which causes hook to return null
-    mockClient.from.mockReturnValue({
+    (mockClient.from as any).mockReturnValue({
       insert: vi.fn().mockReturnValue({
         select: vi.fn().mockResolvedValue({ data: undefined, error: null }),
         single: vi.fn().mockResolvedValue({ data: undefined, error: null }),
       }),
-    } as any);
+    });
 
     // When
-    const { result } = renderHook(() => useSupabaseMutation());
+    const { result } = renderHook(() => useSupabaseMutation({ client: mockClient }));
 
     let insertedResult: any;
     await act(async () => {
@@ -262,16 +250,16 @@ describe.skip('useSupabaseMutation', () => {
       error: null,
     });
 
-    mockClient.from.mockReturnValue({
+    (mockClient.from as any).mockReturnValue({
       delete: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
           delete: mockDelete,
         }),
       }),
-    } as any);
+    });
 
     // When
-    const { result } = renderHook(() => useSupabaseMutation());
+    const { result } = renderHook(() => useSupabaseMutation({ client: mockClient }));
 
     let deleteResult: boolean = false;
     await act(async () => {
@@ -288,15 +276,15 @@ describe.skip('useSupabaseMutation', () => {
     // Given
     const insertError = { message: 'Insert failed' };
 
-    mockClient.from.mockReturnValue({
+    (mockClient.from as any).mockReturnValue({
       insert: vi.fn().mockReturnValue({
         select: vi.fn().mockResolvedValue({ data: null, error: insertError }),
         single: vi.fn().mockResolvedValue({ data: null, error: insertError }),
       }),
-    } as any);
+    });
 
     // When
-    const { result } = renderHook(() => useSupabaseMutation());
+    const { result } = renderHook(() => useSupabaseMutation({ client: mockClient }));
 
     await act(async () => {
       await result.current.insert('users', { name: 'Test' });
