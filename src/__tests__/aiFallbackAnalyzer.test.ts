@@ -89,7 +89,7 @@ describe('AIFallbackAnalyzer', () => {
         storageRequirements: [],
         crudOperations: [{ entity: 'User', operation: 'create', confidence: 85 }],
         overallConfidence: 85,
-        analysisMethod: 'ai'
+        analysisMethod: 'ai',
       });
 
       const result = analyzer.parseResponse(validJson);
@@ -115,7 +115,7 @@ describe('AIFallbackAnalyzer', () => {
     it('should handle response with missing fields', () => {
       const analyzer = new AIFallbackAnalyzer(mockApiKey) as any;
       const partialJson = JSON.stringify({
-        entities: []
+        entities: [],
       });
 
       const result = analyzer.parseResponse(partialJson);
@@ -142,6 +142,86 @@ describe('AIFallbackAnalyzer', () => {
       const result = analyzer.handleError(error);
       expect(result.analysisMethod).toBe('ai');
       expect(result.overallConfidence).toBe(0);
+    });
+  });
+
+  describe('transformResponse - partial response defaults', () => {
+    it('should default contentType to "any" when missing in storage requirement', () => {
+      const analyzer = new AIFallbackAnalyzer(mockApiKey) as any;
+      const partialJson = JSON.stringify({
+        entities: [],
+        hasAuth: false,
+        hasStorage: true,
+        storageRequirements: [
+          { contentType: undefined } // missing contentType
+        ],
+      });
+
+      const result = analyzer.parseResponse(partialJson);
+
+      expect(result.storageRequirements).toHaveLength(1);
+      expect(result.storageRequirements[0].contentType).toBe('any');
+    });
+
+    it('should default contentType to "any" when null in storage requirement', () => {
+      const analyzer = new AIFallbackAnalyzer(mockApiKey) as any;
+      const partialJson = JSON.stringify({
+        entities: [],
+        hasAuth: false,
+        hasStorage: true,
+        storageRequirements: [
+          { contentType: null }
+        ],
+      });
+
+      const result = analyzer.parseResponse(partialJson);
+
+      expect(result.storageRequirements).toHaveLength(1);
+      expect(result.storageRequirements[0].contentType).toBe('any');
+    });
+
+    it('should default confidence to 50 when missing in entity', () => {
+      const analyzer = new AIFallbackAnalyzer(mockApiKey) as any;
+      const partialJson = JSON.stringify({
+        entities: [
+          { name: 'User', fields: [] } // missing confidence
+        ],
+      });
+
+      const result = analyzer.parseResponse(partialJson);
+
+      expect(result.entities).toHaveLength(1);
+      expect(result.entities[0].confidence).toBe(50);
+    });
+
+    it('should default confidence to 50 when missing in auth requirement', () => {
+      const analyzer = new AIFallbackAnalyzer(mockApiKey) as any;
+      const partialJson = JSON.stringify({
+        entities: [],
+        hasAuth: true,
+        authRequirements: [
+          { type: 'login' } // missing confidence
+        ],
+      });
+
+      const result = analyzer.parseResponse(partialJson);
+
+      expect(result.authRequirements).toHaveLength(1);
+      expect(result.authRequirements[0].confidence).toBe(50);
+    });
+
+    it('should default overallConfidence to 50 when missing', () => {
+      const analyzer = new AIFallbackAnalyzer(mockApiKey) as any;
+      const partialJson = JSON.stringify({
+        entities: [],
+        hasAuth: false,
+        hasStorage: false,
+        // missing overallConfidence
+      });
+
+      const result = analyzer.parseResponse(partialJson);
+
+      expect(result.overallConfidence).toBe(50);
     });
   });
 });

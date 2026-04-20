@@ -12,12 +12,12 @@ describe('Phase 5: Cache Layer', () => {
 
     it('should generate consistent SHA256 hash for same code', () => {
       const code = 'interface User { id: string; name: string; }';
-      
+
       // Use internal generateKey method via get/has
       // The cache should generate same key for same code
       const key1 = cache.generateKey(code);
       const key2 = cache.generateKey(code);
-      
+
       expect(key1).toBe(key2);
       expect(key1).toHaveLength(64); // SHA256 hex = 64 chars
     });
@@ -25,20 +25,20 @@ describe('Phase 5: Cache Layer', () => {
     it('should generate different hash for different code', () => {
       const code1 = 'interface User { id: string; }';
       const code2 = 'interface Product { id: string; }';
-      
+
       const key1 = cache.generateKey(code1);
       const key2 = cache.generateKey(code2);
-      
+
       expect(key1).not.toBe(key2);
     });
 
     it('should generate different hash for code with whitespace differences', () => {
       const code1 = 'interface User { id: string; }';
       const code2 = 'interface User {id: string;}';
-      
+
       const key1 = cache.generateKey(code1);
       const key2 = cache.generateKey(code2);
-      
+
       // Different code produces different hash
       expect(key1).not.toBe(key2);
     });
@@ -62,20 +62,22 @@ describe('Phase 5: Cache Layer', () => {
         sourceHash: 'abc123',
         detected: true,
         requirements: {
-          entities: [{ name: 'User', typeName: 'User', fields: [], confidence: 90, matchType: 'pattern' }],
+          entities: [
+            { name: 'User', typeName: 'User', fields: [], confidence: 90, matchType: 'pattern' },
+          ],
           hasAuth: false,
           hasStorage: false,
           crudOperations: [],
           overallConfidence: 90,
           analysisMethod: 'pattern',
-          analyzedAt: new Date().toISOString()
+          analyzedAt: new Date().toISOString(),
         },
-        cachedAt: new Date().toISOString()
+        cachedAt: new Date().toISOString(),
       };
-      
+
       cache.set(code, mockResult);
       const result = cache.get(code);
-      
+
       expect(result).not.toBeNull();
       expect(result?.sourceHash).toBe('abc123');
     });
@@ -100,14 +102,14 @@ describe('Phase 5: Cache Layer', () => {
           crudOperations: [],
           overallConfidence: 0,
           analysisMethod: 'pattern',
-          analyzedAt: new Date().toISOString()
+          analyzedAt: new Date().toISOString(),
         },
-        cachedAt: new Date().toISOString()
+        cachedAt: new Date().toISOString(),
       };
-      
+
       cache.set(code, mockResult);
       const retrieved = cache.get(code);
-      
+
       expect(retrieved?.sourceHash).toBe('def456');
     });
 
@@ -123,11 +125,11 @@ describe('Phase 5: Cache Layer', () => {
           crudOperations: [],
           overallConfidence: 50,
           analysisMethod: 'pattern',
-          analyzedAt: new Date().toISOString()
+          analyzedAt: new Date().toISOString(),
         },
-        cachedAt: new Date().toISOString()
+        cachedAt: new Date().toISOString(),
       };
-      
+
       cache.set(code, mockResult);
       expect(cache.has(code)).toBe(true);
     });
@@ -143,7 +145,7 @@ describe('Phase 5: Cache Layer', () => {
       const shortTTL = 100; // 100ms
       const cache = new AnalysisCache(shortTTL);
       const code = 'interface User { id: string; }';
-      
+
       const mockResult: DetectionResult = {
         sourceHash: 'expired',
         detected: true,
@@ -154,16 +156,16 @@ describe('Phase 5: Cache Layer', () => {
           crudOperations: [],
           overallConfidence: 50,
           analysisMethod: 'pattern',
-          analyzedAt: new Date().toISOString()
+          analyzedAt: new Date().toISOString(),
         },
-        cachedAt: new Date().toISOString()
+        cachedAt: new Date().toISOString(),
       };
-      
+
       cache.set(code, mockResult);
-      
+
       // Wait for TTL to expire
-      await new Promise(resolve => setTimeout(resolve, 150));
-      
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
       const result = cache.get(code);
       expect(result).toBeNull();
     });
@@ -172,7 +174,7 @@ describe('Phase 5: Cache Layer', () => {
       const shortTTL = 5000; // 5 seconds
       const cache = new AnalysisCache(shortTTL);
       const code = 'interface User { id: string; }';
-      
+
       const mockResult: DetectionResult = {
         sourceHash: 'valid',
         detected: true,
@@ -183,16 +185,16 @@ describe('Phase 5: Cache Layer', () => {
           crudOperations: [],
           overallConfidence: 50,
           analysisMethod: 'pattern',
-          analyzedAt: new Date().toISOString()
+          analyzedAt: new Date().toISOString(),
         },
-        cachedAt: new Date().toISOString()
+        cachedAt: new Date().toISOString(),
       };
-      
+
       cache.set(code, mockResult);
-      
+
       // Wait a bit but less than TTL
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
       const result = cache.get(code);
       expect(result).not.toBeNull();
       expect(result?.sourceHash).toBe('valid');
@@ -200,12 +202,17 @@ describe('Phase 5: Cache Layer', () => {
 
     it('isExpired should detect expired entries', () => {
       const cache = new AnalysisCache(100);
-      
+
       // Create expired entry manually
       const oldTime = Date.now() - 200;
       // @ts-ignore - accessing private method for test
-      const expired = cache.isExpired({ createdAt: oldTime, ttl: 100, key: '', result: {} as DetectionResult });
-      
+      const expired = cache.isExpired({
+        createdAt: oldTime,
+        ttl: 100,
+        key: '',
+        result: {} as DetectionResult,
+      });
+
       expect(expired).toBe(true);
     });
   });
@@ -220,7 +227,7 @@ describe('Phase 5: Cache Layer', () => {
     it('should clear all cached entries', () => {
       const code1 = 'interface User { id: string; }';
       const code2 = 'interface Product { id: string; }';
-      
+
       const mockResult: DetectionResult = {
         sourceHash: 'hash',
         detected: true,
@@ -231,19 +238,19 @@ describe('Phase 5: Cache Layer', () => {
           crudOperations: [],
           overallConfidence: 50,
           analysisMethod: 'pattern',
-          analyzedAt: new Date().toISOString()
+          analyzedAt: new Date().toISOString(),
         },
-        cachedAt: new Date().toISOString()
+        cachedAt: new Date().toISOString(),
       };
-      
+
       cache.set(code1, mockResult);
       cache.set(code2, mockResult);
-      
+
       expect(cache.has(code1)).toBe(true);
       expect(cache.has(code2)).toBe(true);
-      
+
       cache.clear();
-      
+
       expect(cache.has(code1)).toBe(false);
       expect(cache.has(code2)).toBe(false);
     });

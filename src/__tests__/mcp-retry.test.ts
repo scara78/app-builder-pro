@@ -16,19 +16,20 @@ describe('Retry Logic', () => {
       vi.useRealTimers();
       const fn = vi.fn().mockResolvedValue('success');
       const result = await withRetry(fn);
-      
+
       expect(result).toBe('success');
       expect(fn).toHaveBeenCalledTimes(1);
     });
 
     it('should retry on transient failure', async () => {
       vi.useRealTimers();
-      const fn = vi.fn()
+      const fn = vi
+        .fn()
         .mockRejectedValueOnce(new Error('Network error'))
         .mockResolvedValue('success');
-      
+
       const result = await withRetry(fn, { maxRetries: 3 });
-      
+
       expect(result).toBe('success');
       expect(fn).toHaveBeenCalledTimes(2);
     });
@@ -36,24 +37,22 @@ describe('Retry Logic', () => {
     it('should throw after max retries exhausted', async () => {
       vi.useRealTimers();
       const fn = vi.fn().mockRejectedValue(new Error('Persistent error'));
-      
+
       await expect(withRetry(fn, { maxRetries: 1 })).rejects.toThrow('Persistent error');
       expect(fn).toHaveBeenCalledTimes(2); // 1 initial + 1 retry
     }, 10000);
 
     it('should not retry on non-retryable errors', async () => {
       const fn = vi.fn().mockRejectedValue(new MCPAuthError('Invalid token'));
-      
+
       await expect(withRetry(fn, { maxRetries: 3 })).rejects.toBeInstanceOf(MCPAuthError);
       expect(fn).toHaveBeenCalledTimes(1);
     });
 
     it('should handle async functions correctly', async () => {
       vi.useRealTimers();
-      const fn = vi.fn().mockImplementation(() => 
-        Promise.resolve('async success')
-      );
-      
+      const fn = vi.fn().mockImplementation(() => Promise.resolve('async success'));
+
       const result = await withRetry(fn);
       expect(result).toBe('async success');
     });

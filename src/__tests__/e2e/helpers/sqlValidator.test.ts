@@ -3,7 +3,12 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { validateSQLSyntax, containsTable, containsRLS, containsForeignKey } from '../helpers/sqlValidator';
+import {
+  validateSQLSyntax,
+  containsTable,
+  containsRLS,
+  containsForeignKey,
+} from '../helpers/sqlValidator';
 
 describe('SQL Validator', () => {
   describe('validateSQLSyntax', () => {
@@ -52,7 +57,7 @@ describe('SQL Validator', () => {
     });
 
     it('should reject unbalanced single quotes', () => {
-      const sql = "CREATE TABLE users (name TEXT NOT NULL;";
+      const sql = 'CREATE TABLE users (name TEXT NOT NULL;';
       const result = validateSQLSyntax(sql);
       expect(result.valid).toBe(false);
     });

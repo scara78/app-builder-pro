@@ -1,5 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { MCPError, MCPNetworkError, MCPAuthError, MCPRateLimitError, MCPNotFoundError, MCPValidationError } from '../services/supabase/errors';
+import {
+  MCPError,
+  MCPNetworkError,
+  MCPAuthError,
+  MCPRateLimitError,
+  MCPNotFoundError,
+  MCPValidationError,
+  MCPTimeoutError,
+  mapHttpError,
+} from '../services/supabase/errors';
 
 describe('MCPError', () => {
   it('should create error with code and message', () => {
@@ -81,5 +90,60 @@ describe('MCPValidationError', () => {
     const error = new MCPValidationError('Invalid email', 'email');
     expect(error.code).toBe('VALIDATION');
     expect(error.field).toBe('email');
+  });
+});
+
+describe('MCPTimeoutError', () => {
+  it('should create error with TIMEOUT code', () => {
+    const error = new MCPTimeoutError(30000);
+    expect(error.code).toBe('TIMEOUT');
+    expect(error.message).toBe('Request timed out after 30000ms');
+  });
+
+  it('should include timeout value in message', () => {
+    const error = new MCPTimeoutError(5000);
+    expect(error.message).toContain('5000');
+  });
+
+  it('should not be retryable', () => {
+    const error = new MCPTimeoutError(30000);
+    expect(error.isRetryable()).toBe(false);
+  });
+});
+
+describe('mapHttpError', () => {
+  describe('default case for unknown status codes', () => {
+    it('should return MCPNetworkError with maxRetries: 0 for status 418', () => {
+      const error = mapHttpError(418, "I'm a teapot");
+      expect(error).toBeInstanceOf(MCPNetworkError);
+      expect(error.code).toBe('NETWORK');
+      expect(error.message).toBe("I'm a teapot");
+      // Default case sets maxRetries to 0
+      expect((error as MCPNetworkError).maxRetries).toBe(0);
+    });
+
+    it('should return MCPNetworkError with maxRetries: 0 for status 501', () => {
+      const error = mapHttpError(501, 'Not Implemented');
+      expect(error).toBeInstanceOf(MCPNetworkError);
+      expect((error as MCPNetworkError).maxRetries).toBe(0);
+    });
+
+    it('should return MCPNetworkError with maxRetries: 0 for status 509', () => {
+      const error = mapHttpError(509, 'Bandwidth Limit Exceeded');
+      expect(error).toBeInstanceOf(MCPNetworkError);
+      expect((error as MCPNetworkError).maxRetries).toBe(0);
+    });
+
+    it('should handle unknown status code 999', () => {
+      const error = mapHttpError(999, 'Unknown error');
+      expect(error).toBeInstanceOf(MCPNetworkError);
+      expect((error as MCPNetworkError).maxRetries).toBe(0);
+    });
+
+    it('should handle unknown status code 600', () => {
+      const error = mapHttpError(600, 'Invalid response');
+      expect(error).toBeInstanceOf(MCPNetworkError);
+      expect((error as MCPNetworkError).maxRetries).toBe(0);
+    });
   });
 });

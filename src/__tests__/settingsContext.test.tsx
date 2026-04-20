@@ -14,14 +14,15 @@ describe('SettingsContext', () => {
     sessionStorage.clear();
   });
 
-  it('should use sessionStorage, not localStorage', async () => {
-    sessionStorage.setItem('app-builder-api-key', 'test-key');
+  // SEC-01: Memory-only state (updated test)
+  it('should use memory-only state (no sessionStorage)', async () => {
+    sessionStorage.setItem('app-builder-api-key', 'old-session-key');
     render(
       <SettingsProvider>
         <TestComponent />
       </SettingsProvider>
     );
-    // Verify sessionStorage was called, not localStorage
-    expect(sessionStorage.getItem).toHaveBeenCalled();
+    // Verify sessionStorage is NOT called - using memory only
+    expect(sessionStorage.getItem).not.toHaveBeenCalled();
   });
 });

@@ -16,17 +16,17 @@ export interface ValidationResult {
 /**
  * Validate PostgreSQL syntax using regex-based validation.
  * This is sufficient for E2E testing scope where we don't execute against a real database.
- * 
+ *
  * @param sql - The SQL string to validate
  * @returns ValidationResult with valid flag and list of errors
- * 
+ *
  * @example
  * const result = validateSQLSyntax('CREATE TABLE users (id UUID PRIMARY KEY);');
  * console.log(result.valid); // true
  */
 export function validateSQLSyntax(sql: string): ValidationResult {
   const errors: string[] = [];
-  
+
   if (!sql || sql.trim() === '') {
     return { valid: true, errors: [] };
   }
@@ -46,23 +46,49 @@ export function validateSQLSyntax(sql: string): ValidationResult {
   // Check for CREATE TABLE keyword if any DDL is present
   const hasDDL = /CREATE\s+(TABLE|EXTENSION|POLICY)/i.test(sql);
   const hasInsert = /INSERT\s+INTO/i.test(sql);
-  
+
   if (!hasDDL && !hasInsert) {
     // If neither CREATE nor INSERT, might just be extension setup
     // That's OK - validate keywords instead
     const validKeywords = [
-      'CREATE', 'EXTENSION', 'IF', 'NOT', 'EXISTS', 
-      'UUID', 'TEXT', 'INTEGER', 'BOOLEAN', 'TIMESTAMPTZ',
-      'PRIMARY', 'KEY', 'REFERENCES', 'SERIAL', 'DEFAULT',
-      'ALTER', 'TABLE', 'ENABLE', 'ROW', 'LEVEL', 'SECURITY',
-      'POLICY', 'USING', 'WITH', 'CHECK', 'FOR', 'SELECT',
-      'INSERT', 'INTO', 'STORAGE', 'BUCKETS', 'auth'
+      'CREATE',
+      'EXTENSION',
+      'IF',
+      'NOT',
+      'EXISTS',
+      'UUID',
+      'TEXT',
+      'INTEGER',
+      'BOOLEAN',
+      'TIMESTAMPTZ',
+      'PRIMARY',
+      'KEY',
+      'REFERENCES',
+      'SERIAL',
+      'DEFAULT',
+      'ALTER',
+      'TABLE',
+      'ENABLE',
+      'ROW',
+      'LEVEL',
+      'SECURITY',
+      'POLICY',
+      'USING',
+      'WITH',
+      'CHECK',
+      'FOR',
+      'SELECT',
+      'INSERT',
+      'INTO',
+      'STORAGE',
+      'BUCKETS',
+      'auth',
     ];
-    
-    const hasValidKeywords = validKeywords.some(keyword => 
+
+    const hasValidKeywords = validKeywords.some((keyword) =>
       new RegExp(`\\b${keyword}\\b`, 'i').test(sql)
     );
-    
+
     if (!hasValidKeywords && sql.trim().length > 0) {
       errors.push('No valid PostgreSQL keywords found');
     }
@@ -76,13 +102,13 @@ export function validateSQLSyntax(sql: string): ValidationResult {
 
   return {
     valid: errors.length === 0,
-    errors
+    errors,
   };
 }
 
 /**
  * Check if SQL contains specific table creation (case-insensitive)
- * 
+ *
  * @param sql - The SQL to check
  * @param tableName - The table name to look for
  * @returns true if table is created in the SQL
@@ -96,7 +122,7 @@ export function containsTable(sql: string, tableName: string): boolean {
 
 /**
  * Check if SQL contains RLS policies
- * 
+ *
  * @param sql - The SQL to check
  * @returns true if RLS is enabled in the SQL
  */
@@ -106,7 +132,7 @@ export function containsRLS(sql: string): boolean {
 
 /**
  * Check if SQL contains foreign key constraint
- * 
+ *
  * @param sql - The SQL to check
  * @param fromTable - Source table for FK
  * @param toTable - Target table for FK
@@ -117,7 +143,10 @@ export function containsForeignKey(sql: string, fromTable: string, toTable: stri
   const normalizedFrom = fromTable.toLowerCase();
   const normalizedTo = toTable.toLowerCase();
   // FK pattern: ALTER TABLE source ADD FOREIGN KEY ... REFERENCES target
-  const fkPattern = new RegExp(`alter\\s+table\\s+${normalizedFrom}.*foreign\\s+key.*references\\s+${normalizedTo}`, 'i');
+  const fkPattern = new RegExp(
+    `alter\\s+table\\s+${normalizedFrom}.*foreign\\s+key.*references\\s+${normalizedTo}`,
+    'i'
+  );
   return fkPattern.test(normalizedSql);
 }
 

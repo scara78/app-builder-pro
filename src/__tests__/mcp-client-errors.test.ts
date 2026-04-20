@@ -7,7 +7,7 @@ import {
   MCPRateLimitError,
   MCPNotFoundError,
   MCPValidationError,
-  MCPNetworkError
+  MCPNetworkError,
 } from '../services/supabase/errors';
 
 // Error handling test handlers
@@ -26,7 +26,7 @@ const errorHandlers = [
       name: 'test-project',
       apiUrl: 'https://abc123def.supabase.co',
       anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mock',
-      status: 'ACTIVE'
+      status: 'ACTIVE',
     });
   }),
 
@@ -48,7 +48,7 @@ const errorHandlers = [
 
   // 400 Validation Error
   http.post('*/api/mcp/project/:ref/migration', async ({ request }) => {
-    const body = await request.json() as { sql: string };
+    const body = (await request.json()) as { sql: string };
     if (body.sql === 'INVALID_SQL') {
       return HttpResponse.json(
         { error: { code: '400', message: 'Syntax error at line 1' } },
@@ -61,7 +61,7 @@ const errorHandlers = [
   // Network error simulation (will be handled by MSW error)
   http.post('*/api/mcp/network-error', () => {
     return HttpResponse.error();
-  })
+  }),
 ];
 
 const server = setupServer(...errorHandlers);
@@ -74,12 +74,10 @@ describe('Phase 6: Error Handling Integration', () => {
     it('should throw MCPAuthError on 401 response', async () => {
       const client = new SupabaseMCPClient({
         accessToken: 'invalid-token',
-        baseUrl: 'https://api.supabase.com/mcp'
+        baseUrl: 'https://api.supabase.com/mcp',
       });
 
-      await expect(client.createProject('test', 'us-east-1'))
-        .rejects
-        .toThrow(MCPAuthError);
+      await expect(client.createProject('test', 'us-east-1')).rejects.toThrow(MCPAuthError);
     });
 
     it('should NOT retry on 401 (auth errors are not retryable)', async () => {
@@ -87,7 +85,7 @@ describe('Phase 6: Error Handling Integration', () => {
       const client = new SupabaseMCPClient({
         accessToken: 'invalid-token',
         baseUrl: 'https://api.supabase.com/mcp',
-        maxRetries: 3
+        maxRetries: 3,
       });
 
       try {
@@ -114,7 +112,7 @@ describe('Phase 6: Error Handling Integration', () => {
     it('should throw MCPRateLimitError with retryAfter from header', async () => {
       const client = new SupabaseMCPClient({
         accessToken: 'valid-token',
-        baseUrl: 'https://api.supabase.com/mcp'
+        baseUrl: 'https://api.supabase.com/mcp',
       });
 
       // Override the handler for this test
@@ -142,19 +140,17 @@ describe('Phase 6: Error Handling Integration', () => {
     it('should throw MCPNotFoundError on 404 response', async () => {
       const client = new SupabaseMCPClient({
         accessToken: 'valid-token',
-        baseUrl: 'https://api.supabase.com/mcp'
+        baseUrl: 'https://api.supabase.com/mcp',
       });
 
-      await expect(client.getProjectUrl('not-found'))
-        .rejects
-        .toThrow(MCPNotFoundError);
+      await expect(client.getProjectUrl('not-found')).rejects.toThrow(MCPNotFoundError);
     });
 
     it('should NOT retry on 404 (not found is not retryable)', async () => {
       const client = new SupabaseMCPClient({
         accessToken: 'valid-token',
         baseUrl: 'https://api.supabase.com/mcp',
-        maxRetries: 3
+        maxRetries: 3,
       });
 
       const startTime = Date.now();
@@ -172,19 +168,19 @@ describe('Phase 6: Error Handling Integration', () => {
     it('should throw MCPValidationError on 400 response', async () => {
       const client = new SupabaseMCPClient({
         accessToken: 'valid-token',
-        baseUrl: 'https://api.supabase.com/mcp'
+        baseUrl: 'https://api.supabase.com/mcp',
       });
 
-      await expect(client.applyMigration('test-project', 'INVALID_SQL', 'test'))
-        .rejects
-        .toThrow(MCPValidationError);
+      await expect(client.applyMigration('test-project', 'INVALID_SQL', 'test')).rejects.toThrow(
+        MCPValidationError
+      );
     });
 
     it('should NOT retry on 400 (validation errors are not retryable)', async () => {
       const client = new SupabaseMCPClient({
         accessToken: 'valid-token',
         baseUrl: 'https://api.supabase.com/mcp',
-        maxRetries: 3
+        maxRetries: 3,
       });
 
       const startTime = Date.now();
@@ -204,7 +200,7 @@ describe('Phase 6: Error Handling Integration', () => {
       const client = new SupabaseMCPClient({
         accessToken: 'valid-token',
         baseUrl: 'https://api.supabase.com/mcp',
-        maxRetries: 1 // Reduced to speed up test
+        maxRetries: 1, // Reduced to speed up test
       });
 
       // Override handler to simulate 503 server error (retryable)
@@ -223,7 +219,7 @@ describe('Phase 6: Error Handling Integration', () => {
             name: 'test-project',
             apiUrl: 'https://abc123def.supabase.co',
             anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mock',
-            status: 'ACTIVE'
+            status: 'ACTIVE',
           });
         })
       );
@@ -245,19 +241,19 @@ describe('Phase 6: Error Handling Integration', () => {
         accessToken: 'valid-token',
         baseUrl: 'https://api.supabase.com/mcp',
         timeout: 100, // 100ms timeout
-        maxRetries: 0 // No retries to test timeout directly
+        maxRetries: 0, // No retries to test timeout directly
       });
 
       // Override handler with delay - longer than timeout
       server.use(
         http.post('*/api/mcp/create_project', async () => {
-          await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
+          await new Promise((resolve) => setTimeout(resolve, 500)); // 500ms delay
           return HttpResponse.json({
             ref: 'abc123def',
             name: 'test-project',
             apiUrl: 'https://abc123def.supabase.co',
             anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.mock',
-            status: 'ACTIVE'
+            status: 'ACTIVE',
           });
         })
       );
@@ -273,9 +269,9 @@ describe('Phase 6: Error Handling Integration', () => {
         const errorMessage = String(error);
         expect(
           errorMessage.includes('timeout') ||
-          errorMessage.includes('Timeout') ||
-          errorMessage.includes('aborted') ||
-          errorMessage.includes('The operation timed out')
+            errorMessage.includes('Timeout') ||
+            errorMessage.includes('aborted') ||
+            errorMessage.includes('The operation timed out')
         ).toBe(true);
       }
     }, 10000); // 10s timeout for this test

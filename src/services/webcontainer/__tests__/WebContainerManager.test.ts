@@ -1,0 +1,303 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { WebContainerManager } from '../WebContainerManager';
+import type { FileSystemTree } from '@/types';
+
+// ============================================
+// MOCK SETUP - vi.mock creates everything inside
+// ============================================
+
+// Use vi.hoisted to access the mocks after vi.mock is called
+const { mockContainer, mockBoot } = vi.hoisted(() => {
+  const mockProcess = {
+    output: {
+      pipeTo: vi.fn(),
+    },
+    exit: Promise.resolve(0) as Promise<number>,
+  };
+
+  const container = {
+    mount: vi.fn().mockResolvedValue(undefined),
+    spawn: vi.fn().mockResolvedValue(mockProcess),
+    fs: {
+      readFile: vi.fn().mockResolvedValue(new TextEncoder().encode('file contents')),
+      writeFile: vi.fn().mockResolvedValue(undefined),
+      mkdir: vi.fn().mockResolvedValue(undefined),
+      readdir: vi.fn().mockResolvedValue([]),
+    },
+    on: vi.fn(),
+  };
+
+  return {
+    mockContainer: container,
+    mockBoot: vi.fn().mockResolvedValue(container),
+  };
+});
+
+// Mock BEFORE importing WebContainerManager - hoisted to top by Vitest
+vi.mock('@webcontainer/api', () => ({
+  WebContainer: {
+    boot: mockBoot,
+  },
+}));
+
+// Sample file system tree for testing
+const sampleFileTree: FileSystemTree = {
+  'index.html': {
+    file: {
+      contents: '<!DOCTYPE html><html><body>Hello World</body></html>',
+    },
+  },
+  'src': {
+    directory: {
+      'main.ts': {
+        file: {
+          contents: 'console.log("hello");',
+        },
+      },
+    },
+  },
+};
+
+describe('WebContainerManager', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Reset the singleton
+    (WebContainerManager as any).instance = null;
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+    (WebContainerManager as any).instance = null;
+  });
+
+  describe('getInstance', () => {
+    it('returns a singleton instance', async () => {
+      // Given - WebContainer is already booted by vi.mock
+      
+      // When
+      const instance1 = await WebContainerManager.getInstance();
+      const instance2 = await WebContainerManager.getInstance();
+
+      // Then
+      expect(instance1).toBe(instance2);
+    });
+
+    it('boots WebContainer on first call', async () => {
+      // When
+      await WebContainerManager.getInstance();
+
+      // Then
+      expect(mockBoot).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('mount', () => {
+    it('mounts file tree successfully', async () => {
+      // Given
+      const manager = await WebContainerManager.getInstance();
+
+      // When
+      await manager.mount(sampleFileTree);
+
+      // Then
+      expect(mockContainer.mount).toHaveBeenCalledWith(sampleFileTree);
+    });
+
+    it('boots WebContainer if not already booted', async () => {
+      // Given
+      const manager = await WebContainerManager.getInstance();
+      mockContainer.mount.mockClear();
+
+      // When
+      await manager.mount(sampleFileTree);
+
+      // Then
+      expect(mockContainer.mount).toHaveBeenCalledWith(sampleFileTree);
+    });
+  });
+
+  describe('writeFile', () => {
+    it('writes file to container', async () => {
+      // Given
+      const manager = await WebContainerManager.getInstance();
+
+      // When
+      await manager.writeFile('/src/index.ts', 'const x = 1;');
+
+      // Then
+      expect(mockContainer.fs.writeFile).toHaveBeenCalledWith('/src/index.ts', 'const x = 1;');
+    });
+
+    it('boots WebContainer if not already booted', async () => {
+      // Given
+      const manager = await WebContainerManager.getInstance();
+      mockContainer.fs.writeFile.mockClear();
+
+      // When
+      await manager.writeFile('/src/index.ts', 'const x = 1;');
+
+      // Then
+      expect(mockContainer.fs.writeFile).toHaveBeenCalledWith('/src/index.ts', 'const x = 1;');
+    });
+  });
+
+  describe('readFile', () => {
+    it('reads file from container', async () => {
+      // Given
+      const manager = await WebContainerManager.getInstance();
+
+      // When
+      const content = await manager.readFile('/src/index.ts');
+
+      // Then
+      expect(mockContainer.fs.readFile).toHaveBeenCalledWith('/src/index.ts');
+      expect(content).toBe('file contents');
+    });
+
+    it('boots WebContainer if not already booted', async () => {
+      // Given
+      const manager = await WebContainerManager.getInstance();
+      mockContainer.fs.readFile.mockClear();
+
+      // When
+      await manager.readFile('/src/index.ts');
+
+      // Then
+      expect(mockContainer.fs.readFile).toHaveBeenCalledWith('/src/index.ts');
+    });
+  });
+
+  describe('install', () => {
+    it('runs npm install', async () => {
+      // Given
+      const manager = await WebContainerManager.getInstance();
+
+      // When
+      const exitPromise = manager.install();
+
+      // Then
+      expect(mockContainer.spawn).toHaveBeenCalledWith('npm', ['install']);
+      const exitCode = await exitPromise;
+      expect(exitCode).toBe(0);
+    });
+
+    it('calls onLog callback with output', async () => {
+      // Given
+      const onLog = vi.fn();
+      const manager = await WebContainerManager.getInstance();
+
+      // When
+      await manager.install(onLog);
+
+      // Then - onLog gets called through pipeTo
+      expect(mockContainer.spawn).toHaveBeenCalledWith('npm', ['install']);
+    });
+
+    it('boots WebContainer if not already booted', async () => {
+      // Given
+      const manager = await WebContainerManager.getInstance();
+      mockContainer.spawn.mockClear();
+
+      // When
+      await manager.install();
+
+      // Then
+      expect(mockContainer.spawn).toHaveBeenCalledWith('npm', ['install']);
+    });
+  });
+
+  describe('runDev', () => {
+    it('starts npm run dev', async () => {
+      // Given
+      const manager = await WebContainerManager.getInstance();
+
+      // When
+      const process = await manager.runDev();
+
+      // Then
+      expect(mockContainer.spawn).toHaveBeenCalledWith('npm', ['run', 'dev']);
+      expect(mockContainer.on).toHaveBeenCalledWith('server-ready', expect.any(Function));
+    });
+
+    it('calls onReady callback with server URL', async () => {
+      // Given
+      const manager = await WebContainerManager.getInstance();
+      const onReady = vi.fn();
+
+      // When
+      await manager.runDev(undefined, onReady);
+
+      // Then - trigger the server-ready event
+      const serverReadyCallback = mockContainer.on.mock.calls.find(
+        (call: unknown[]) => call[0] === 'server-ready'
+      )?.[1] as ((port: number, url: string) => void) | undefined;
+      
+      if (serverReadyCallback) {
+        serverReadyCallback(3000, 'http://localhost:3000');
+      }
+      expect(onReady).toHaveBeenCalledWith('http://localhost:3000');
+    });
+
+    it('boots WebContainer if not already booted', async () => {
+      // Given
+      const manager = await WebContainerManager.getInstance();
+      mockContainer.spawn.mockClear();
+
+      // When
+      await manager.runDev();
+
+      // Then
+      expect(mockContainer.spawn).toHaveBeenCalledWith('npm', ['run', 'dev']);
+    });
+  });
+
+  describe('error handling', () => {
+    it('throws when boot fails', async () => {
+      // Given
+      mockBoot.mockRejectedValueOnce(new Error('Boot failed'));
+      (WebContainerManager as any).instance = null;
+
+      // When & Then
+      await expect(WebContainerManager.getInstance()).rejects.toThrow('Boot failed');
+      
+      // Reset for other tests
+      mockBoot.mockResolvedValue(mockContainer);
+    });
+
+    it('throws when mount fails', async () => {
+      // Given
+      mockContainer.mount.mockRejectedValueOnce(new Error('Mount failed'));
+      const manager = await WebContainerManager.getInstance();
+
+      // When & Then
+      await expect(manager.mount(sampleFileTree)).rejects.toThrow('Mount failed');
+      
+      // Reset
+      mockContainer.mount.mockResolvedValue(undefined);
+    });
+
+    it('throws when writeFile fails', async () => {
+      // Given
+      mockContainer.fs.writeFile.mockRejectedValueOnce(new Error('Write failed'));
+      const manager = await WebContainerManager.getInstance();
+
+      // When & Then
+      await expect(manager.writeFile('/src/index.ts', 'content')).rejects.toThrow('Write failed');
+      
+      // Reset
+      mockContainer.fs.writeFile.mockResolvedValue(undefined);
+    });
+
+    it('throws when readFile fails', async () => {
+      // Given
+      mockContainer.fs.readFile.mockRejectedValueOnce(new Error('Read failed'));
+      const manager = await WebContainerManager.getInstance();
+
+      // When & Then
+      await expect(manager.readFile('/src/index.ts')).rejects.toThrow('Read failed');
+      
+      // Reset
+      mockContainer.fs.readFile.mockResolvedValue(new TextEncoder().encode('file contents'));
+    });
+  });
+});
