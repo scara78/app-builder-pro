@@ -21,7 +21,7 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({ state, url }) => {
           <input type="text" value={url || 'localhost:5173'} readOnly />
           <ShieldCheck size={14} className="icon-secure" />
         </div>
-        
+
         <div className="preview-actions">
           <button className="btn-icon-small" title="Refresh">
             <RefreshCw size={14} className={isLoading ? 'spin' : ''} />
@@ -57,7 +57,7 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({ state, url }) => {
               <button onClick={() => setHasError(false)}>Retry</button>
             </div>
           ) : (
-            <iframe 
+            <iframe
               src={url}
               sandbox="allow-scripts"
               title="App Preview"

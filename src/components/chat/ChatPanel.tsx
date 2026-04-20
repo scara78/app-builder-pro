@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
 import { type ChatMessage } from '../../types';
+import { sanitizeInput } from '../../utils/sanitize';
 import './ChatPanel.css';
 
 interface ChatPanelProps {
@@ -27,7 +28,9 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, onSendMessage, isGenera
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (input.trim() && !isGenerating) {
-      onSendMessage(input.trim());
+      // SEC-03: Apply sanitization to user input before sending
+      const sanitizedContent = sanitizeInput(input.trim());
+      onSendMessage(sanitizedContent);
       setInput('');
     }
   };
@@ -67,14 +70,11 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, onSendMessage, isGenera
                 <div className="message-header">
                   <span className="sender">{msg.role === 'user' ? 'You' : 'AI Assistant'}</span>
                 </div>
-<div className="message-text">
-                    <ReactMarkdown 
-                      remarkPlugins={[remarkGfm]} 
-                      rehypePlugins={[rehypeSanitize]}
-                    >
-                      {msg.content}
-                    </ReactMarkdown>
-                  </div>
+                <div className="message-text">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
+                    {msg.content}
+                  </ReactMarkdown>
+                </div>
               </div>
             </div>
           ))
@@ -89,7 +89,9 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, onSendMessage, isGenera
                 <span className="sender">AI Assistant</span>
               </div>
               <div className="typing-indicator">
-                <span></span><span></span><span></span>
+                <span></span>
+                <span></span>
+                <span></span>
               </div>
             </div>
           </div>

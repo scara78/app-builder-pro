@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Shield, AlertTriangle, Activity } from 'lucide-react';
 import { quotaManager } from '../../services/ai/AIQuotaManager';
 import { useSettings } from '../../contexts/SettingsContext';
 
 export function QuotaStatus() {
-  const { getEffectiveApiKey, modelId } = useSettings();
-  
+  const { getEffectiveApiKey } = useSettings();
+
   const updateStats = useCallback(() => {
     // Only show if user has API key configured
     if (!getEffectiveApiKey()) {
@@ -34,7 +34,10 @@ export function QuotaStatus() {
 
   if (stats.circuitOpen) {
     return (
-      <div className="quota-status error" title={`${stats.errorCount} errors - circuit breaker active`}>
+      <div
+        className="quota-status error"
+        title={`${stats.errorCount} errors - circuit breaker active`}
+      >
         <AlertTriangle size={14} />
         <span>Circuit Break</span>
       </div>

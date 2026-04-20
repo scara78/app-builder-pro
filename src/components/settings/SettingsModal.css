@@ -189,9 +189,16 @@
   font-weight: 600;
 }
 
-.status-success { color: #10b981; }
-.status-error { color: #ef4444; }
-.status-loading { color: var(--accent-primary); animation: pulse 1.5s infinite; }
+.status-success {
+  color: #10b981;
+}
+.status-error {
+  color: #ef4444;
+}
+.status-loading {
+  color: var(--accent-primary);
+  animation: pulse 1.5s infinite;
+}
 
 .btn-test {
   padding: 8px 16px;
@@ -213,8 +220,13 @@
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 .btn-secondary {
@@ -243,6 +255,10 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }

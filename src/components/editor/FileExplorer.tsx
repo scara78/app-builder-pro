@@ -18,15 +18,15 @@ interface TreeNode {
 
 function buildTree(files: ProjectFile[]): TreeNode[] {
   const root: TreeNode[] = [];
-  
-  files.forEach(file => {
+
+  files.forEach((file) => {
     const parts = file.path.split('/').filter(Boolean);
     let current = root;
-    
+
     parts.forEach((part, index) => {
       const isLast = index === parts.length - 1;
-      const existing = current.find(n => n.name === part);
-      
+      const existing = current.find((n) => n.name === part);
+
       if (existing) {
         if (!isLast) {
           if (!existing.children) existing.children = [];
@@ -39,14 +39,14 @@ function buildTree(files: ProjectFile[]): TreeNode[] {
           isOpen: !isLast,
           children: isLast ? undefined : [],
           path: file.path,
-          content: file.content
+          content: file.content,
         };
         current.push(newNode);
         if (!isLast) current = newNode.children!;
       }
     });
   });
-  
+
   return root;
 }
 
@@ -67,11 +67,9 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ files = [] }) => {
           )}
           <span className="item-name">{item.name}</span>
         </div>
-        
+
         {item.type === 'folder' && item.isOpen && item.children && (
-          <div className="tree-children">
-            {renderTree(item.children, depth + 1)}
-          </div>
+          <div className="tree-children">{renderTree(item.children, depth + 1)}</div>
         )}
       </div>
     ));
@@ -82,17 +80,17 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ files = [] }) => {
       <div className="explorer-header">
         <span>Files</span>
         <div className="explorer-actions">
-          <button title="New File"><Plus size={14} /></button>
-          <button title="More"><MoreVertical size={14} /></button>
+          <button title="New File">
+            <Plus size={14} />
+          </button>
+          <button title="More">
+            <MoreVertical size={14} />
+          </button>
         </div>
       </div>
-      
+
       <div className="file-tree">
-        {tree.length > 0 ? (
-          renderTree(tree)
-        ) : (
-          <div className="empty-state">No files</div>
-        )}
+        {tree.length > 0 ? renderTree(tree) : <div className="empty-state">No files</div>}
       </div>
     </div>
   );

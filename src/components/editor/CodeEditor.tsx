@@ -10,11 +10,11 @@ interface CodeEditorProps {
   onChange?: (value: string | undefined) => void;
 }
 
-const CodeEditor: React.FC<CodeEditorProps> = ({ 
-  fileName = 'App.tsx', 
-  code = '// Welcome to App Builder Pro\n// Your code will appear here...', 
+const CodeEditor: React.FC<CodeEditorProps> = ({
+  fileName = 'App.tsx',
+  code = '// Welcome to App Builder Pro\n// Your code will appear here...',
   language = 'typescript',
-  onChange 
+  onChange,
 }) => {
   return (
     <div className="code-editor-container">
@@ -34,7 +34,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
           </button>
         </div>
       </div>
-      
+
       <div className="monaco-wrapper">
         <Editor
           height="100%"
@@ -50,7 +50,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
             scrollBeyondLastLine: false,
             readOnly: false,
             automaticLayout: true,
-            padding: { top: 16 }
+            padding: { top: 16 },
           }}
         />
       </div>

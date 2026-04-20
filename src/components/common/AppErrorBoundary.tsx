@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from 'react';
+import { getGenericErrorMessage } from '../../utils/logger';
 
 interface Props {
   children: ReactNode;
@@ -54,7 +55,11 @@ export class AppErrorBoundary extends Component<Props, State> {
               </svg>
             </div>
             <h2>Something went wrong</h2>
-            <p className="error-message">{this.state.error?.message || 'An unexpected error occurred'}</p>
+            <p className="error-message">
+              {this.state.error
+                ? getGenericErrorMessage(this.state.error)
+                : 'An unexpected error occurred.'}
+            </p>
             <button className="error-reset-btn" onClick={this.handleReset}>
               Try Again
             </button>

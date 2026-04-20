@@ -37,7 +37,8 @@
   gap: 12px;
 }
 
-.btn-save, .btn-run {
+.btn-save,
+.btn-run {
   display: flex;
   align-items: center;
   gap: 6px;

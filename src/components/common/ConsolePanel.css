@@ -75,13 +75,13 @@
 }
 
 .log-entry.success .log-text {
-  color: #10B981; /* Green */
+  color: #10b981; /* Green */
 }
 
 .log-entry.warn .log-text {
-  color: #F59E0B; /* Amber */
+  color: #f59e0b; /* Amber */
 }
 
 .log-entry.error .log-text {
-  color: #EF4444; /* Red */
+  color: #ef4444; /* Red */
 }

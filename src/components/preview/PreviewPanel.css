@@ -31,7 +31,7 @@
 }
 
 .icon-secure {
-  color: #10B981; /* Green */
+  color: #10b981; /* Green */
 }
 
 .address-bar input {
@@ -81,8 +81,12 @@
 }
 
 @keyframes rotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .preview-viewport {
@@ -140,9 +144,18 @@
   border: 1px solid var(--border);
 }
 
-.rect-1 { width: 100px; opacity: 0.1; }
-.rect-2 { width: 180px; opacity: 0.2; }
-.rect-3 { width: 140px; opacity: 0.15; }
+.rect-1 {
+  width: 100px;
+  opacity: 0.1;
+}
+.rect-2 {
+  width: 180px;
+  opacity: 0.2;
+}
+.rect-3 {
+  width: 140px;
+  opacity: 0.15;
+}
 
 .loader-container {
   display: flex;
@@ -180,7 +193,7 @@
   justify-content: center;
   border-radius: 50%;
   background: rgba(239, 68, 68, 0.1);
-  color: #EF4444;
+  color: #ef4444;
   font-size: 24px;
   font-weight: bold;
 }
