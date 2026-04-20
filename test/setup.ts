@@ -1,22 +1,33 @@
 import { vi } from 'vitest'
+import '@testing-library/jest-dom';
 
-// Mock localStorage
-const localStorageMock = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
-}
-global.localStorage = localStorageMock as Storage
+// Mock localStorage with actual storage implementation for jsdom
+const createStorageMock = () => {
+  const store: Record<string, string> = {};
+  return {
+    getItem: vi.fn((key: string) => store[key] ?? null),
+    setItem: vi.fn((key: string, value: string) => { store[key] = value; }),
+    removeItem: vi.fn((key: string) => { delete store[key]; }),
+    clear: vi.fn(() => { Object.keys(store).forEach(key => delete store[key]); }),
+    get length() { return Object.keys(store).length; },
+    key: vi.fn((index: number) => Object.keys(store)[index] ?? null),
+  };
+};
 
-// Mock sessionStorage
-const sessionStorageMock = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
-}
-global.sessionStorage = sessionStorageMock as Storage
+// Create storage instances that can be used for spying
+const localStorageInstance = createStorageMock();
+const sessionStorageInstance = createStorageMock();
+
+// Use Object.defineProperty to allow proper spying while maintaining the mock behavior
+Object.defineProperty(global, 'localStorage', {
+  configurable: true,
+  get: () => localStorageInstance,
+});
+
+Object.defineProperty(global, 'sessionStorage', {
+  configurable: true,
+  get: () => sessionStorageInstance,
+});
 
 // Mock fetch
 global.fetch = vi.fn()
