@@ -4,7 +4,7 @@ import { type FileSystemTree } from '../../types';
 export class WebContainerManager {
   private static instance: WebContainerManager;
   private webcontainerInstance: WebContainer | null = null;
-  
+
   private constructor() {}
 
   public static async getInstance(): Promise<WebContainerManager> {
@@ -19,8 +19,8 @@ export class WebContainerManager {
 
   public async boot(): Promise<WebContainer> {
     if (this.webcontainerInstance) return this.webcontainerInstance;
-    
-    console.log("Booting WebContainer...");
+
+    console.log('Booting WebContainer...');
     this.webcontainerInstance = await WebContainer.boot();
     return this.webcontainerInstance;
   }
@@ -36,12 +36,14 @@ export class WebContainerManager {
     }
 
     const installProcess = await this.webcontainerInstance!.spawn('npm', ['install']);
-    
-    installProcess.output.pipeTo(new WritableStream({
-      write(data) {
-        onLog?.(data);
-      }
-    }));
+
+    installProcess.output.pipeTo(
+      new WritableStream({
+        write(data) {
+          onLog?.(data);
+        },
+      })
+    );
 
     return installProcess.exit;
   }
@@ -52,14 +54,16 @@ export class WebContainerManager {
     }
 
     const devProcess = await this.webcontainerInstance!.spawn('npm', ['run', 'dev']);
-    
-    devProcess.output.pipeTo(new WritableStream({
-      write(data) {
-        onLog?.(data);
-      }
-    }));
 
-    this.webcontainerInstance!.on('server-ready', (port, url) => {
+    devProcess.output.pipeTo(
+      new WritableStream({
+        write(data) {
+          onLog?.(data);
+        },
+      })
+    );
+
+    this.webcontainerInstance!.on('server-ready', (_port, url) => {
       onReady?.(url);
     });
 

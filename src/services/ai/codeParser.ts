@@ -54,18 +54,18 @@ export function parseAIResponse(text: string): ParseResult {
 
   // Validaciones para warnings
   if (files.length === 0) {
-    warnings.push("No se detectaron archivos en la respuesta del AI");
+    warnings.push('No se detectaron archivos en la respuesta del AI');
   }
 
   // Verificar si hay paths de archivo vacíos o muy cortos (posible parsing issue)
-  const emptyPaths = files.filter(f => !f.path || f.path.length < 5);
+  const emptyPaths = files.filter((f) => !f.path || f.path.length < 5);
   if (emptyPaths.length > 0) {
     warnings.push(`Se detectaron ${emptyPaths.length} archivos con path inválido o muy corto`);
   }
 
   const message = messageLines.join('\n').trim();
   if (!message || message.length < 10) {
-    warnings.push("El mensaje de explicación está vacío o es muy corto");
+    warnings.push('El mensaje de explicación está vacío o es muy corto');
   }
 
   return {

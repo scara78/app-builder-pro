@@ -36,10 +36,13 @@ export function useWebContainer(): UseWebContainerReturn {
     return await wc.install(onLog);
   }, []);
 
-  const runDev = useCallback(async (onLog?: (data: string) => void, onReady?: (url: string) => void) => {
-    const wc = await WebContainerManager.getInstance();
-    await wc.runDev(onLog, onReady);
-  }, []);
+  const runDev = useCallback(
+    async (onLog?: (data: string) => void, onReady?: (url: string) => void) => {
+      const wc = await WebContainerManager.getInstance();
+      await wc.runDev(onLog, onReady);
+    },
+    []
+  );
 
   return { mount, writeFile, install, runDev, isReady, error };
 }

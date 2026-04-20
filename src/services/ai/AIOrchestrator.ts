@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { type ChatMessage, type ProjectFile, type AIResponse } from '../../types';
+import { type ProjectFile, type AIResponse } from '../../types';
 import { SYSTEM_PROMPT } from './prompts';
 import { parseAIResponse } from './codeParser';
 import { quotaManager } from './AIQuotaManager';
@@ -9,7 +9,7 @@ export class AIOrchestrator {
   private genAI: GoogleGenerativeAI | null = null;
   private modelId: string = 'gemini-2.5-flash';
   private currentApiKey: string = '';
-  
+
   private constructor() {
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
     if (apiKey) {
@@ -23,7 +23,8 @@ export class AIOrchestrator {
   }
 
   public updateConfig(apiKey: string, modelId: string) {
-    console.log("[AIOrchestrator] Updating config:", { modelId, hasApiKey: !!apiKey });
+    // SEC-02: Only log non-sensitive configuration
+    console.log('[AIOrchestrator] Updating config:', { modelId, hasApiKey: !!apiKey });
     this.modelId = modelId;
     if (apiKey && apiKey !== this.currentApiKey) {
       this.currentApiKey = apiKey;
@@ -50,11 +51,14 @@ export class AIOrchestrator {
     quotaManager.recordRequest();
 
     if (!this.genAI) {
-      throw new Error("Gemini API Key not found. Please set VITE_GEMINI_API_KEY in your .env file.");
+      throw new Error(
+        'Gemini API Key not found. Please set VITE_GEMINI_API_KEY in your .env file.'
+      );
     }
 
-    console.log("Generating app via Gemini SDK for prompt:", prompt);
-    
+    // SEC-02: Log only prompt length, not content (security best practice)
+    console.log('Generating app via Gemini SDK. Prompt length:', prompt.length);
+
     const sanitizedPrompt = this.sanitizeInput(prompt);
     
     try {
@@ -62,22 +66,27 @@ export class AIOrchestrator {
       
       const result = await model.generateContent([
         SYSTEM_PROMPT,
-        `User Prompt: \${sanitizedPrompt}`
+        `User Prompt: ${sanitizedPrompt}`
       ]);
-      
+
       const response = await result.response;
       const text = response.text();
-      
+
       const { message, files, warnings } = parseAIResponse(text);
       return {
         message,
         files,
         warnings,
-        explanation: "App structure generated via Gemini SDK."
+        explanation: 'App structure generated via Gemini SDK.',
       };
     } catch (error) {
       quotaManager.recordError();
-      console.error("Gemini API Error:", error);
+      // SEC-02: Log generic message, not error objects (avoid stack traces)
+      if (error instanceof Error) {
+        console.error('Gemini API Error:', error.message);
+      } else {
+        console.error('Gemini API Error: Unknown error');
+      }
       throw error;
     }
   }
@@ -90,50 +99,56 @@ export class AIOrchestrator {
     quotaManager.recordRequest();
 
     if (!this.genAI) {
-      throw new Error("Gemini API Key not found.");
+      throw new Error('Gemini API Key not found.');
     }
 
     const model = this.genAI.getGenerativeModel({ model: this.modelId });
-    
+
     const sanitizedRequest = this.sanitizeInput(request);
     const sanitizedContext = currentFiles
       .slice(0, 10)
-      .map(f => `File: ${f.path}\n\n${f.content.slice(0, 5000)}`)
+      .map((f) => `File: ${f.path}\n\n${f.content.slice(0, 5000)}`)
       .join('\n\n---\n\n')
       .slice(0, 50000);
     const sanitizedContextLimited = this.sanitizeInput(sanitizedContext);
-    
+
     try {
       const result = await model.generateContent([
         SYSTEM_PROMPT,
         `Current Project Files:\n${sanitizedContextLimited}`,
-        `User Request for Modification: ${sanitizedRequest}`
+        `User Request for Modification: ${sanitizedRequest}`,
       ]);
-      
+
       const response = await result.response;
       const text = response.text();
-      
+
       const { message, files, warnings } = parseAIResponse(text);
       return {
         message,
         files,
-        warnings
+        warnings,
       };
     } catch (error) {
       quotaManager.recordError();
-      console.error("Gemini Refine Error:", error);
+      // SEC-02: Log generic message, not error objects (avoid stack traces)
+      if (error instanceof Error) {
+        console.error('Gemini Refine Error:', error.message);
+      } else {
+        console.error('Gemini Refine Error: Unknown error');
+      }
       throw error;
     }
   }
 
   public async testConnection(): Promise<string[]> {
-    if (!this.genAI) throw new Error("No API Key configured");
+    if (!this.genAI) throw new Error('No API Key configured');
     try {
       const model = this.genAI.getGenerativeModel({ model: this.modelId });
       const result = await model.generateContent("Say 'Connection Successful'");
       return [result.response.text()];
     } catch (error: any) {
-      console.error("Test Connection Error:", error);
+      // SEC-02: Log generic message, not error objects (avoid stack traces)
+      console.error('Test Connection Error:', error.message || 'Unknown error');
       throw error;
     }
   }

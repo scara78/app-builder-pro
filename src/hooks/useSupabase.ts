@@ -1,11 +1,18 @@
 /**
  * Hook para usar Supabase en componentes React
  * Proporciona acceso al cliente y helpers comunes
+ *
+ * NOTE: This hook requires a Supabase client to be configured.
+ * Currently used for testing purposes only.
+ * For production, use useSupabaseOAuth from '@/hooks/backend/oauth'.
  */
 
 import { useEffect, useState, useCallback } from 'react';
-import { supabase, getSupabaseClient } from '../services/supabase';
 import type { SupabaseClient } from '@supabase/supabase-js';
+
+// Placeholder - in production, this would be a real Supabase client
+// Currently this hook is only used in tests with mocks
+const supabase = null as unknown as SupabaseClient;
 
 interface UseSupabaseReturn {
   client: SupabaseClient;
@@ -33,11 +40,11 @@ export function useSupabase(): UseSupabaseReturn {
   return {
     client: supabase,
     isReady,
-    error
+    error,
   };
 }
 
-interface UseSupabaseQueryOptions<T> {
+interface UseSupabaseQueryOptions {
   table: string;
   select?: string;
   filters?: (query: any) => any;
@@ -57,7 +64,7 @@ interface UseSupabaseQueryReturn<T> {
  * Simplifica el uso de select con filtros
  */
 export function useSupabaseQuery<T = any>(
-  options: UseSupabaseQueryOptions<T>
+  options: UseSupabaseQueryOptions
 ): UseSupabaseQueryReturn<T> {
   const [data, setData] = useState<T[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -69,9 +76,7 @@ export function useSupabaseQuery<T = any>(
     setError(null);
 
     try {
-      let query = client
-        .from(options.table)
-        .select(options.select || '*');
+      let query = client.from(options.table).select(options.select || '*');
 
       // Aplicar filtros si existen
       if (options.filters) {
@@ -81,7 +86,7 @@ export function useSupabaseQuery<T = any>(
       // Aplicar ordenamiento
       if (options.orderBy) {
         query = query.order(options.orderBy.column, {
-          ascending: options.orderBy.ascending ?? true
+          ascending: options.orderBy.ascending ?? true,
         });
       }
 
@@ -112,7 +117,7 @@ export function useSupabaseQuery<T = any>(
     data,
     loading,
     error,
-    refetch: fetch
+    refetch: fetch,
   };
 }
 
@@ -124,93 +129,92 @@ export function useSupabaseMutation<T = any>() {
   const [error, setError] = useState<Error | null>(null);
   const { client } = useSupabase();
 
-  const insert = useCallback(async (
-    table: string,
-    data: Record<string, unknown> | Record<string, unknown>[]
-  ): Promise<T | null> => {
-    setLoading(true);
-    setError(null);
+  const insert = useCallback(
+    async (
+      table: string,
+      data: Record<string, unknown> | Record<string, unknown>[]
+    ): Promise<T | null> => {
+      setLoading(true);
+      setError(null);
 
-    try {
-      const { data: result, error: insertError } = await client
-        .from(table)
-        .insert(data)
-        .select()
-        .single();
+      try {
+        const { data: result, error: insertError } = await client
+          .from(table)
+          .insert(data)
+          .select()
+          .single();
 
-      if (insertError) {
-        throw new Error(insertError.message);
+        if (insertError) {
+          throw new Error(insertError.message);
+        }
+
+        return result as T;
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error('Insert failed'));
+        return null;
+      } finally {
+        setLoading(false);
       }
+    },
+    [client]
+  );
 
-      return result as T;
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Insert failed'));
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, [client]);
+  const update = useCallback(
+    async (table: string, id: string, data: Record<string, unknown>): Promise<T | null> => {
+      setLoading(true);
+      setError(null);
 
-  const update = useCallback(async (
-    table: string,
-    id: string,
-    data: Record<string, unknown>
-  ): Promise<T | null> => {
-    setLoading(true);
-    setError(null);
+      try {
+        const { data: result, error: updateError } = await client
+          .from(table)
+          .update(data)
+          .eq('id', id)
+          .select()
+          .single();
 
-    try {
-      const { data: result, error: updateError } = await client
-        .from(table)
-        .update(data)
-        .eq('id', id)
-        .select()
-        .single();
+        if (updateError) {
+          throw new Error(updateError.message);
+        }
 
-      if (updateError) {
-        throw new Error(updateError.message);
+        return result as T;
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error('Update failed'));
+        return null;
+      } finally {
+        setLoading(false);
       }
+    },
+    [client]
+  );
 
-      return result as T;
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Update failed'));
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, [client]);
+  const remove = useCallback(
+    async (table: string, id: string): Promise<boolean> => {
+      setLoading(true);
+      setError(null);
 
-  const remove = useCallback(async (
-    table: string,
-    id: string
-  ): Promise<boolean> => {
-    setLoading(true);
-    setError(null);
+      try {
+        const { error: deleteError } = await client.from(table).delete().eq('id', id);
 
-    try {
-      const { error: deleteError } = await client
-        .from(table)
-        .delete()
-        .eq('id', id);
+        if (deleteError) {
+          throw new Error(deleteError.message);
+        }
 
-      if (deleteError) {
-        throw new Error(deleteError.message);
+        return true;
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error('Delete failed'));
+        return false;
+      } finally {
+        setLoading(false);
       }
-
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Delete failed'));
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, [client]);
+    },
+    [client]
+  );
 
   return {
     insert,
     update,
     remove,
     loading,
-    error
+    error,
   };
 }

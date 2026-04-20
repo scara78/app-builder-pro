@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, Terminal, Code2, Rocket, Settings } from 'lucide-react';
 import SettingsModal from '../components/settings/SettingsModal';
+import { sanitizeInput } from '../utils/sanitize';
 import './LandingPage.css';
 
 interface LandingPageProps {
@@ -13,16 +14,18 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStartBuild }) => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const examples = [
-    "A modern SaaS dashboard with dark mode",
-    "A personal portfolio for a creative developer",
-    "A real-time crypto tracker with charts",
-    "A minimal landing page for an AI product"
+    'A modern SaaS dashboard with dark mode',
+    'A personal portfolio for a creative developer',
+    'A real-time crypto tracker with charts',
+    'A minimal landing page for an AI product',
   ];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (prompt.trim()) {
-      onStartBuild(prompt);
+      // SEC-03: Apply sanitization to landing page prompt
+      const sanitizedPrompt = sanitizeInput(prompt);
+      onStartBuild(sanitizedPrompt);
     }
   };
 
@@ -31,11 +34,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStartBuild }) => {
       {/* Background Orbs */}
       <div className="bg-orb orb-1"></div>
       <div className="bg-orb orb-2"></div>
-      
+
       <header className="landing-header">
         <div className="logo-container">
           <Sparkles className="logo-icon" />
-          <span className="logo-text">App Builder <span>Pro</span></span>
+          <span className="logo-text">
+            App Builder <span>Pro</span>
+          </span>
         </div>
         <nav className="landing-nav">
           <a href="#">Showcase</a>
@@ -49,7 +54,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStartBuild }) => {
       </header>
 
       <main className="landing-main">
-        <motion.div 
+        <motion.div
           className="hero-content"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -60,19 +65,19 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStartBuild }) => {
             <span>AI-First Builder v1.0</span>
           </div>
           <h1 className="hero-title">
-            Build any app <br /> 
+            Build any app <br />
             <span className="gradient-text">with just a prompt</span>
           </h1>
           <p className="hero-description">
-            The intelligent builder for non-technical founders and developers alike. 
-            Describe it, vibe it, and our AI constructs the code in seconds.
+            The intelligent builder for non-technical founders and developers alike. Describe it,
+            vibe it, and our AI constructs the code in seconds.
           </p>
 
           <form className="prompt-form" onSubmit={handleSubmit}>
             <div className="prompt-input-wrapper glass">
               <Terminal className="input-icon" />
-              <input 
-                type="text" 
+              <input
+                type="text"
                 placeholder="What do you want to build today?"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
@@ -88,11 +93,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStartBuild }) => {
             <span className="examples-label">Try these:</span>
             <div className="examples-list">
               {examples.map((ex, i) => (
-                <button 
-                  key={i} 
-                  className="example-chip glass"
-                  onClick={() => setPrompt(ex)}
-                >
+                <button key={i} className="example-chip glass" onClick={() => setPrompt(ex)}>
                   {ex}
                 </button>
               ))}
@@ -100,7 +101,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStartBuild }) => {
           </div>
         </motion.div>
 
-        <motion.div 
+        <motion.div
           className="feature-grid"
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}

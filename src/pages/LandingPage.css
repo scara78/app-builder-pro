@@ -281,11 +281,11 @@
   .hero-title {
     font-size: 2.5rem;
   }
-  
+
   .feature-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .landing-nav {
     display: none;
   }

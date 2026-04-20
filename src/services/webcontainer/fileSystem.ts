@@ -3,7 +3,7 @@ import { type FileSystemTree, type ProjectFile } from '../../types';
 export function filesToTree(files: ProjectFile[]): FileSystemTree {
   const tree: FileSystemTree = {};
 
-  files.forEach(file => {
+  files.forEach((file) => {
     const parts = file.path.split('/');
     let current = tree;
 
@@ -14,13 +14,13 @@ export function filesToTree(files: ProjectFile[]): FileSystemTree {
       if (isLast) {
         current[part] = {
           file: {
-            contents: file.content
-          }
+            contents: file.content,
+          },
         };
       } else {
         if (!current[part]) {
           current[part] = {
-            directory: {}
+            directory: {},
           };
         }
         // Move into directory
@@ -50,8 +50,8 @@ export function filesToTree(files: ProjectFile[]): FileSystemTree {
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-        `.trim()
-      }
+        `.trim(),
+      },
     };
   }
 
@@ -69,8 +69,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <App />
   </React.StrictMode>,
 )
-        `.trim()
-      }
+        `.trim(),
+      },
     };
   }
 
@@ -85,8 +85,8 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
 })
-        `.trim()
-      }
+        `.trim(),
+      },
     };
   }
 
