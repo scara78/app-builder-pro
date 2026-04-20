@@ -1,6 +1,6 @@
 /**
  * MigrationBuilder Tests
- * 
+ *
  * Tests for SQL migration composition.
  * Verifies correct ordering of SQL fragments and integration of all components.
  */
@@ -376,6 +376,115 @@ describe('MigrationBuilder', () => {
       expect(result.tables).toContain('users');
       expect(result.tables).toContain('posts');
       expect(result.tables).toHaveLength(2);
+    });
+  });
+
+// SG-011: Unknown type handling
+// Note: getPostgresType handles unknown types gracefully - logs warning and returns TEXT.
+// Dead code (catch block) was removed from MigrationBuilder.ts.
+// These tests verify the actual behavior: warnings generated via TypeMapping.
+  describe('SG-011: Unknown type handling', () => {
+    it('should default unknown type to TEXT and generate warning via TypeMapping', () => {
+      const backendRequirements: BackendRequirements = {
+        entities: [
+          {
+            name: 'custom_data',
+            typeName: 'CustomData',
+            fields: [
+              { name: 'id', type: 'string', isOptional: false },
+              { name: 'metadata', type: 'CustomType', isOptional: true },
+            ],
+            confidence: 90,
+            matchType: 'pattern',
+          },
+        ],
+        hasAuth: false,
+        hasStorage: false,
+        storageRequirements: [],
+        crudOperations: [],
+        overallConfidence: 90,
+        analysisMethod: 'pattern',
+        analyzedAt: new Date().toISOString(),
+      };
+
+      // Using builder without custom logger - TypeMapping uses console.warn
+      const builder = new MigrationBuilder();
+      const result = builder.build(backendRequirements);
+
+      // Should default to TEXT for unknown type
+      expect(result.sql).toContain('metadata TEXT');
+      // Warnings array exists and is properly initialized
+      expect(result.warnings).toBeDefined();
+      expect(Array.isArray(result.warnings)).toBe(true);
+    });
+
+    it('should call logger if provided for unknown type via TypeMapping', () => {
+      const mockLogger = vi.fn();
+      const backendRequirements: BackendRequirements = {
+        entities: [
+          {
+            name: 'items',
+            typeName: 'Item',
+            fields: [
+              { name: 'id', type: 'string', isOptional: false },
+              { name: 'data', type: 'SomeUnknownType', isOptional: false },
+            ],
+            confidence: 90,
+            matchType: 'pattern',
+          },
+        ],
+        hasAuth: false,
+        hasStorage: false,
+        storageRequirements: [],
+        crudOperations: [],
+        overallConfidence: 90,
+        analysisMethod: 'pattern',
+        analyzedAt: new Date().toISOString(),
+      };
+
+      const builder = new MigrationBuilder({ logger: mockLogger });
+      builder.build(backendRequirements);
+
+      // Logger should be called with the warning from TypeMapping
+      expect(mockLogger).toHaveBeenCalledTimes(1);
+      expect(mockLogger).toHaveBeenCalledWith(
+        expect.stringContaining('Unknown TypeScript type')
+      );
+    });
+
+    it('should handle multiple unknown types with warnings via TypeMapping', () => {
+      const backendRequirements: BackendRequirements = {
+        entities: [
+          {
+            name: 'mixed',
+            typeName: 'Mixed',
+            fields: [
+              { name: 'id', type: 'string', isOptional: false },
+              { name: 'field1', type: 'UnknownType1', isOptional: true },
+              { name: 'field2', type: 'UnknownType2', isOptional: false },
+            ],
+            confidence: 90,
+            matchType: 'pattern',
+          },
+        ],
+        hasAuth: false,
+        hasStorage: false,
+        storageRequirements: [],
+        crudOperations: [],
+        overallConfidence: 90,
+        analysisMethod: 'pattern',
+        analyzedAt: new Date().toISOString(),
+      };
+
+      // Suppress console.warn during test
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const builder = new MigrationBuilder();
+      const result = builder.build(backendRequirements);
+      warnSpy.mockRestore();
+
+      // Verify SQL uses TEXT for unknown types
+      expect(result.sql).toContain('field1 TEXT');
+      expect(result.sql).toContain('field2 TEXT');
     });
   });
 });

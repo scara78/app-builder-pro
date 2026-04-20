@@ -3,7 +3,13 @@
  * CHANGE 2 - Phase 3
  */
 
-import type { Entity, AuthRequirement, StorageRequirement, CRUDSOperation, BackendRequirements } from './types';
+import type {
+  Entity,
+  AuthRequirement,
+  StorageRequirement,
+  CRUDSOperation,
+  BackendRequirements,
+} from './types';
 
 /**
  * Confidence levels
@@ -11,23 +17,8 @@ import type { Entity, AuthRequirement, StorageRequirement, CRUDSOperation, Backe
 export const CONFIDENCE_THRESHOLD = {
   HIGH: 80,
   MEDIUM: 60,
-  LOW: 60 // below this triggers AI fallback
+  LOW: 60, // below this triggers AI fallback
 } as const;
-
-/**
- * Base confidence by pattern type
- */
-const ENTITY_BASE_CONFIDENCE: Record<string, number> = {
-  interface: 90,
-  typeAlias: 85,
-  useAuth: 95,
-  loginComponent: 90,
-  registerComponent: 90,
-  fileInput: 85,
-  uploadHandler: 90,
-  formSubmit: 80,
-  deleteHandler: 85
-};
 
 /**
  * Generic entity names that should be penalized
@@ -42,7 +33,7 @@ const MODIFIERS = {
   EXPLICIT_TYPES: 5,
   MULTIPLE_FIELDS: 5,
   TOP_OF_FILE: 3,
-  GENERIC_NAME_PENALTY: 10
+  GENERIC_NAME_PENALTY: 10,
 } as const;
 
 /**
@@ -52,7 +43,7 @@ const AGGREGATE_WEIGHTS = {
   ENTITY: 0.4,
   AUTH: 0.2,
   STORAGE: 0.2,
-  CRUD: 0.2
+  CRUD: 0.2,
 } as const;
 
 /**
@@ -75,27 +66,27 @@ export class ConfidenceCalculator {
    */
   calculateEntityConfidence(entity: Entity): number {
     let confidence = entity.confidence;
-    
+
     // Check for explicit interface (not generic type alias or inferred)
     if (entity.matchType === 'pattern' && this.isExplicitInterface(entity)) {
       confidence += MODIFIERS.EXPLICIT_TYPES;
     }
-    
+
     // Multiple fields detection bonus
     if (entity.fields.length >= 2) {
       confidence += MODIFIERS.MULTIPLE_FIELDS;
     } else if (entity.fields.length === 0) {
       confidence -= MODIFIERS.GENERIC_NAME_PENALTY;
     }
-    
+
     // Penalize generic names
     if (GENERIC_NAMES.includes(entity.name)) {
       confidence -= MODIFIERS.GENERIC_NAME_PENALTY;
     }
-    
+
     // Has JSDoc comment detection (would need AST, base confidence already high)
     // This is implicit in the pattern matching
-    
+
     return this.clampConfidence(confidence);
   }
 
@@ -116,17 +107,21 @@ export class ConfidenceCalculator {
    */
   calculateAuthConfidence(auth: AuthRequirement): number {
     let confidence = auth.confidence;
-    
+
     // useAuth hook is most explicit
-    if (auth.triggerPattern === 'useAuth' || auth.triggerPattern === 'AuthContext' || auth.triggerPattern === 'AuthProvider') {
+    if (
+      auth.triggerPattern === 'useAuth' ||
+      auth.triggerPattern === 'AuthContext' ||
+      auth.triggerPattern === 'AuthProvider'
+    ) {
       confidence += MODIFIERS.EXPLICIT_TYPES;
     }
-    
+
     // has userFields shows more explicit intent
     if (auth.userFields && auth.userFields.length > 0) {
       confidence += MODIFIERS.MULTIPLE_FIELDS;
     }
-    
+
     return this.clampConfidence(confidence);
   }
 
@@ -147,17 +142,17 @@ export class ConfidenceCalculator {
    */
   calculateStorageConfidence(storage: StorageRequirement): number {
     let confidence = storage.confidence;
-    
+
     // upload handler is more explicit than file input
     if (storage.triggerPattern === 'uploadHandler' || storage.triggerPattern === 'onUpload') {
       confidence += MODIFIERS.EXPLICIT_TYPES;
     }
-    
+
     // Specific content type is higher confidence than 'any'
     if (storage.contentType !== 'any' && storage.contentType !== undefined) {
       confidence += MODIFIERS.MULTIPLE_FIELDS;
     }
-    
+
     return this.clampConfidence(confidence);
   }
 
@@ -178,17 +173,17 @@ export class ConfidenceCalculator {
    */
   calculateCRUDConfidence(operation: CRUDSOperation): number {
     let confidence = operation.confidence;
-    
+
     // Delete handler is more explicit (destructive action requires intent)
     if (operation.operation === 'delete') {
       confidence += MODIFIERS.EXPLICIT_TYPES;
     }
-    
+
     // Form submit is generic, less explicit
     if (operation.triggerPattern === 'formSubmit') {
       confidence -= 5;
     }
-    
+
     return this.clampConfidence(confidence);
   }
 
@@ -207,35 +202,37 @@ export class ConfidenceCalculator {
    * ```
    */
   calculateAggregate(requirements: BackendRequirements): number {
-    const entityConfidences = requirements.entities.map(e => this.calculateEntityConfidence(e));
-    const authConfidences = requirements.authRequirements?.map(a => this.calculateAuthConfidence(a)) ?? [];
-    const storageConfidences = requirements.storageRequirements?.map(s => this.calculateStorageConfidence(s)) ?? [];
-    const crudConfidences = requirements.crudOperations.map(c => this.calculateCRUDConfidence(c));
-    
+    const entityConfidences = requirements.entities.map((e) => this.calculateEntityConfidence(e));
+    const authConfidences =
+      requirements.authRequirements?.map((a) => this.calculateAuthConfidence(a)) ?? [];
+    const storageConfidences =
+      requirements.storageRequirements?.map((s) => this.calculateStorageConfidence(s)) ?? [];
+    const crudConfidences = requirements.crudOperations.map((c) => this.calculateCRUDConfidence(c));
+
     // Calculate weighted average
-    const avgEntity = entityConfidences.length 
-      ? entityConfidences.reduce((a, b) => a + b, 0) / entityConfidences.length 
+    const avgEntity = entityConfidences.length
+      ? entityConfidences.reduce((a, b) => a + b, 0) / entityConfidences.length
       : 0;
-    
-    const avgAuth = authConfidences.length 
-      ? authConfidences.reduce((a, b) => a + b, 0) / authConfidences.length 
+
+    const avgAuth = authConfidences.length
+      ? authConfidences.reduce((a, b) => a + b, 0) / authConfidences.length
       : 0;
-    
-    const avgStorage = storageConfidences.length 
-      ? storageConfidences.reduce((a, b) => a + b, 0) / storageConfidences.length 
+
+    const avgStorage = storageConfidences.length
+      ? storageConfidences.reduce((a, b) => a + b, 0) / storageConfidences.length
       : 0;
-    
-    const avgCRUD = crudConfidences.length 
-      ? crudConfidences.reduce((a, b) => a + b, 0) / crudConfidences.length 
+
+    const avgCRUD = crudConfidences.length
+      ? crudConfidences.reduce((a, b) => a + b, 0) / crudConfidences.length
       : 0;
-    
+
     // Weighted aggregate
-    const aggregate = 
-      (avgEntity * AGGREGATE_WEIGHTS.ENTITY) +
-      (avgAuth * AGGREGATE_WEIGHTS.AUTH) +
-      (avgStorage * AGGREGATE_WEIGHTS.STORAGE) +
-      (avgCRUD * AGGREGATE_WEIGHTS.CRUD);
-    
+    const aggregate =
+      avgEntity * AGGREGATE_WEIGHTS.ENTITY +
+      avgAuth * AGGREGATE_WEIGHTS.AUTH +
+      avgStorage * AGGREGATE_WEIGHTS.STORAGE +
+      avgCRUD * AGGREGATE_WEIGHTS.CRUD;
+
     return Math.round(this.clampConfidence(aggregate));
   }
 
@@ -285,9 +282,11 @@ export class ConfidenceCalculator {
    */
   private isExplicitInterface(entity: Entity): boolean {
     // Interface declarations are more explicit than type aliases
-    return entity.typeName.toLowerCase() !== 'data' && 
-           entity.typeName.toLowerCase() !== 'item' &&
-           entity.fields.length > 0;
+    return (
+      entity.typeName.toLowerCase() !== 'data' &&
+      entity.typeName.toLowerCase() !== 'item' &&
+      entity.fields.length > 0
+    );
   }
 
   /**

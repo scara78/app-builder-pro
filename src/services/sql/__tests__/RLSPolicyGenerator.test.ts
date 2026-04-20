@@ -1,6 +1,6 @@
 /**
  * RLSPolicyGenerator Tests
- * 
+ *
  * Tests for Row-Level Security policy generation.
  * Covers scenarios RLS-H001 through RLS-H004, RLS-E001 through RLS-E003, RLS-ERR001, RLS-ERR002
  */
@@ -197,9 +197,7 @@ describe('RLSPolicyGenerator', () => {
       const entity: Entity = {
         name: 'public_data',
         typeName: 'PublicData',
-        fields: [
-          { name: 'id', type: 'string', isOptional: false },
-        ],
+        fields: [{ name: 'id', type: 'string', isOptional: false }],
         confidence: 90,
         matchType: 'pattern',
         // Mark as public through a special field or config
@@ -221,9 +219,7 @@ describe('RLSPolicyGenerator', () => {
       const entity: Entity = {
         name: 'users',
         typeName: 'User',
-        fields: [
-          { name: 'id', type: 'string', isOptional: false },
-        ],
+        fields: [{ name: 'id', type: 'string', isOptional: false }],
         confidence: 90,
         matchType: 'pattern',
       };

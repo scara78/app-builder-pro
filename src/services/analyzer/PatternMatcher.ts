@@ -3,7 +3,16 @@
  * CHANGE 2 - Phase 2
  */
 
-import type { Entity, EntityPattern, AuthRequirement, AuthPattern, StorageRequirement, StoragePattern, CRUDSOperation, CRUDPattern } from './types';
+import type {
+  Entity,
+  EntityPattern,
+  AuthRequirement,
+  AuthPattern,
+  StorageRequirement,
+  StoragePattern,
+  CRUDSOperation,
+  CRUDPattern,
+} from './types';
 
 /**
  * Container for all pattern types used by the matcher
@@ -20,34 +29,79 @@ export interface MatcherPatterns {
  */
 const defaultEntityPatterns: EntityPattern[] = [
   { id: 'interface', regex: /interface\s+(\w+)\s*\{([^}]+)\}/g, baseConfidence: 90 },
-  { id: 'typeAlias', regex: /type\s+(\w+)\s*=\s*\{([^}]+)\}/g, baseConfidence: 85 }
+  { id: 'typeAlias', regex: /type\s+(\w+)\s*=\s*\{([^}]+)\}/g, baseConfidence: 85 },
 ];
 
 /**
  * Default auth patterns for login/register detection
  */
 const defaultAuthPatterns: AuthPattern[] = [
-  { id: 'loginComponent', regex: /<Login|login|signin|sign-in/i, baseConfidence: 90, authType: 'login' },
-  { id: 'registerComponent', regex: /<Register|register|signup|sign-up/i, baseConfidence: 90, authType: 'register' },
-  { id: 'useAuth', regex: /useAuth|AuthContext|AuthProvider/i, baseConfidence: 95, authType: 'login' }
+  {
+    id: 'loginComponent',
+    regex: /<Login|login|signin|sign-in/i,
+    baseConfidence: 90,
+    authType: 'login',
+  },
+  {
+    id: 'registerComponent',
+    regex: /<Register|register|signup|sign-up/i,
+    baseConfidence: 90,
+    authType: 'register',
+  },
+  {
+    id: 'useAuth',
+    regex: /useAuth|AuthContext|AuthProvider/i,
+    baseConfidence: 95,
+    authType: 'login',
+  },
 ];
 
 /**
  * Default storage patterns for file upload detection
  */
 const defaultStoragePatterns: StoragePattern[] = [
-  { id: 'fileInput', regex: /type\s*=\s*['"]file['"]|file\s*upload/i, baseConfidence: 85, contentType: 'any' },
-  { id: 'uploadHandler', regex: /onUpload|handleUpload|uploadFile/i, baseConfidence: 90, contentType: 'any' }
+  {
+    id: 'fileInput',
+    regex: /type\s*=\s*['"]file['"]|file\s*upload/i,
+    baseConfidence: 85,
+    contentType: 'any',
+  },
+  {
+    id: 'uploadHandler',
+    regex: /onUpload|handleUpload|uploadFile/i,
+    baseConfidence: 90,
+    contentType: 'any',
+  },
 ];
 
 /**
  * Default CRUD patterns for form handler detection
  */
 const defaultCrudPatterns: CRUDPattern[] = [
-  { id: 'formCreate', regex: /<form.*onSubmit|handleCreate|onCreate/i, baseConfidence: 80, operation: 'create' },
-  { id: 'handleDelete', regex: /handleDelete|onDelete|delete\w+/i, baseConfidence: 85, operation: 'delete' },
-  { id: 'handleUpdate', regex: /handleUpdate|onUpdate|update\w+/i, baseConfidence: 85, operation: 'update' },
-  { id: 'fetchRead', regex: /fetch\(.*\/api\/|useEffect.*fetch|loadData/i, baseConfidence: 70, operation: 'read' }
+  {
+    id: 'formCreate',
+    regex: /<form.*onSubmit|handleCreate|onCreate/i,
+    baseConfidence: 80,
+    operation: 'create',
+  },
+  {
+    id: 'handleDelete',
+    regex: /handleDelete|onDelete|delete\w+/i,
+    baseConfidence: 85,
+    operation: 'delete',
+  },
+  {
+    id: 'handleUpdate',
+    regex: /handleUpdate|onUpdate|update\w+/i,
+    baseConfidence: 85,
+    operation: 'update',
+  },
+  {
+    id: 'fetchRead',
+    regex: /fetch\(.*\/api\/|useEffect.*fetch|loadData/i,
+    baseConfidence: 70,
+    operation: 'read',
+  },
 ];
 
 /**
@@ -82,7 +136,7 @@ export class PatternMatcher {
       entity: patterns?.entity ?? defaultEntityPatterns,
       auth: patterns?.auth ?? defaultAuthPatterns,
       storage: patterns?.storage ?? defaultStoragePatterns,
-      crud: patterns?.crud ?? defaultCrudPatterns
+      crud: patterns?.crud ?? defaultCrudPatterns,
     };
   }
 
@@ -106,12 +160,13 @@ export class PatternMatcher {
 
     // Calculate overall confidence
     const confidences: number[] = [];
-    if (entities.length) confidences.push(...entities.map(e => e.confidence));
-    if (authRequirements.length) confidences.push(...authRequirements.map(a => a.confidence));
-    if (storageRequirements.length) confidences.push(...storageRequirements.map(s => s.confidence));
-    if (crudOperations.length) confidences.push(...crudOperations.map(c => c.confidence));
+    if (entities.length) confidences.push(...entities.map((e) => e.confidence));
+    if (authRequirements.length) confidences.push(...authRequirements.map((a) => a.confidence));
+    if (storageRequirements.length)
+      confidences.push(...storageRequirements.map((s) => s.confidence));
+    if (crudOperations.length) confidences.push(...crudOperations.map((c) => c.confidence));
 
-    const overallConfidence = confidences.length 
+    const overallConfidence = confidences.length
       ? Math.round(confidences.reduce((a, b) => a + b, 0) / confidences.length)
       : 0;
 
@@ -120,7 +175,7 @@ export class PatternMatcher {
       authRequirements,
       storageRequirements,
       crudOperations,
-      overallConfidence
+      overallConfidence,
     };
   }
 
@@ -129,19 +184,19 @@ export class PatternMatcher {
    */
   private extractFields(body: string): { name: string; type: string; isOptional: boolean }[] {
     const fields: { name: string; type: string; isOptional: boolean }[] = [];
-    
+
     // Match field patterns: name?: type; or name: type;
     const fieldRegex = /(\w+)(\??):\s*(\w+)/g;
     let match;
-    
+
     while ((match = fieldRegex.exec(body)) !== null) {
       fields.push({
         name: match[1],
         type: match[3],
-        isOptional: match[2] === '?'
+        isOptional: match[2] === '?',
       });
     }
-    
+
     return fields;
   }
 
@@ -173,14 +228,18 @@ export class PatternMatcher {
         const fields = this.extractFields(body);
 
         // Check if exported
-        const isExported = /export\s+interface|export\s+type/.test(code.substring(Math.max(0, match.index - 20), match.index));
-        
+        const isExported = /export\s+interface|export\s+type/.test(
+          code.substring(Math.max(0, match.index - 20), match.index)
+        );
+
         entities.push({
           name,
           typeName: name,
           fields,
-          confidence: isExported ? Math.min(100, pattern.baseConfidence + 10) : pattern.baseConfidence,
-          matchType: 'pattern'
+          confidence: isExported
+            ? Math.min(100, pattern.baseConfidence + 10)
+            : pattern.baseConfidence,
+          matchType: 'pattern',
         });
       }
     }
@@ -216,12 +275,12 @@ export class PatternMatcher {
 
     for (const pattern of this.patterns.auth) {
       const regex = new RegExp(pattern.regex.source, pattern.regex.flags);
-      
+
       if (regex.test(code)) {
         requirements.push({
           type: pattern.authType,
           triggerPattern: pattern.id,
-          confidence: pattern.baseConfidence
+          confidence: pattern.baseConfidence,
         });
       }
     }
@@ -249,12 +308,12 @@ export class PatternMatcher {
 
     for (const pattern of this.patterns.storage) {
       const regex = new RegExp(pattern.regex.source, pattern.regex.flags);
-      
+
       if (regex.test(code)) {
         requirements.push({
           contentType: pattern.contentType,
           triggerPattern: pattern.id,
-          confidence: pattern.baseConfidence
+          confidence: pattern.baseConfidence,
         });
       }
     }
@@ -282,16 +341,16 @@ export class PatternMatcher {
 
     for (const pattern of this.patterns.crud) {
       const regex = new RegExp(pattern.regex.source, pattern.regex.flags);
-      
+
       if (regex.test(code)) {
         // Try to find related entity
         const entityMatch = code.match(/(?:interface|type)\s+(\w+)/);
-        
+
         operations.push({
           entity: entityMatch ? entityMatch[1] : 'Unknown',
           operation: pattern.operation,
           triggerPattern: pattern.id,
-          confidence: pattern.baseConfidence
+          confidence: pattern.baseConfidence,
         });
       }
     }

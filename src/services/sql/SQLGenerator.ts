@@ -1,9 +1,9 @@
 /**
  * SQLGenerator Module
- * 
+ *
  * Main entry point for SQL schema generation.
  * Orchestrates all sub-generators to produce complete migration SQL.
- * 
+ *
  * @example
  * const generator = new SQLGenerator();
  * const result = generator.generate(requirements);
@@ -16,7 +16,7 @@ import { MigrationBuilder } from './MigrationBuilder';
 
 /**
  * SQLGenerator
- * 
+ *
  * Main class that generates PostgreSQL DDL from backend requirements.
  * Uses MigrationBuilder internally to orchestrate sub-generators.
  */
@@ -26,7 +26,7 @@ export class SQLGenerator {
 
   /**
    * Create a new SQLGenerator instance.
-   * 
+   *
    * @param config - Optional configuration options
    * @example
    * const generator = new SQLGenerator({ enableRLS: false });
@@ -42,11 +42,11 @@ export class SQLGenerator {
 
   /**
    * Generate PostgreSQL DDL from backend requirements.
-   * 
+   *
    * @param requirements - The backend requirements from analyzer
    * @returns MigrationResult containing SQL, tables, and warnings
    * @throws TypeError if requirements is null or undefined
-   * 
+   *
    * @example
    * const requirements = {
    *   entities: [{ name: 'User', fields: [...] }],

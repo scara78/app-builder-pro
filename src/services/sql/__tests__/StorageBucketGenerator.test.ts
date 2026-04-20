@@ -1,6 +1,6 @@
 /**
  * StorageBucketGenerator Tests
- * 
+ *
  * Tests for storage bucket SQL generation.
  * Covers scenarios SBG-H001 through SBG-H005, SBG-E001 through SBG-E004, SBG-ERR001, SBG-ERR002
  */

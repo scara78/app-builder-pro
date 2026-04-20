@@ -1,6 +1,6 @@
 /**
  * RLSPolicyGenerator Module
- * 
+ *
  * Generates Row-Level Security (RLS) policies for PostgreSQL tables.
  * Enforces authenticated access controls on Supabase.
  */
@@ -11,24 +11,13 @@ import type { Entity } from '../analyzer/types';
  * Owner field naming conventions to detect ownership.
  * As per spec RLS-008/SHOULD.
  */
-const OWNER_FIELD_PATTERNS = [
-  'owner_id',
-  'user_id',
-  'created_by',
-  'owner',
-  'author_id',
-];
+const OWNER_FIELD_PATTERNS = ['owner_id', 'user_id', 'created_by', 'owner', 'author_id'];
 
 /**
  * Reserved tables that should not have RLS policies.
  * As per spec RLS-ERR001.
  */
-const RESERVED_TABLES = [
-  'auth.users',
-  'auth.sessions',
-  'auth.refresh_tokens',
-  'auth.mfa',
-];
+const RESERVED_TABLES = ['auth.users', 'auth.sessions', 'auth.refresh_tokens', 'auth.mfa'];
 
 /**
  * CRUD operations supported by RLS policies.
@@ -37,10 +26,10 @@ type RLSOperation = 'SELECT' | 'INSERT' | 'UPDATE' | 'DELETE';
 
 /**
  * Detect owner field from entity fields.
- * 
+ *
  * @param entity - The entity to inspect
  * @returns The owner field name or undefined if not found
- * 
+ *
  * @example
  * detectOwnerField(entityWithOwnerId) // returns 'owner_id'
  * detectOwnerField(entityWithUserId) // returns 'user_id'
@@ -57,19 +46,15 @@ function detectOwnerField(entity: Entity): string | undefined {
 
 /**
  * Generate a single RLS policy statement.
- * 
+ *
  * @param table - The table name
  * @param operation - The CRUD operation
  * @param ownerField - The owner field name (optional for permissive policies)
  * @returns The policy SQL statement
  */
-function generatePolicy(
-  table: string,
-  operation: RLSOperation,
-  ownerField?: string
-): string {
+function generatePolicy(table: string, operation: RLSOperation, ownerField?: string): string {
   const policyName = `${table}_${operation.toLowerCase()}_policy`;
-  
+
   let usingClause = '';
   if (ownerField) {
     // RLS-006/MUST: Use auth.uid() in USING clause
@@ -87,12 +72,12 @@ function generatePolicy(
 
 /**
  * Generate RLS policies for an entity.
- * 
+ *
  * Generates ALTER TABLE to enable RLS and creates policies for all CRUD operations.
- * 
+ *
  * @param entity - The entity to generate RLS for
  * @returns SQL string with RLS policies
- * 
+ *
  * @example
  * const entity = { name: 'users', fields: [...] };
  * const sql = generateRLS(entity);
@@ -120,7 +105,7 @@ export function generateRLS(entity: Entity): string {
 
   // RLS-002 through RLS-005: Create policies for all CRUD operations
   const operations: RLSOperation[] = ['SELECT', 'INSERT', 'UPDATE', 'DELETE'];
-  
+
   for (const operation of operations) {
     statements.push(generatePolicy(table, operation, ownerField));
   }
@@ -130,11 +115,11 @@ export function generateRLS(entity: Entity): string {
 
 /**
  * Generate RLS for multiple entities.
- * 
+ *
  * @param entities - Array of entities
  * @returns Combined RLS SQL for all entities
  */
 export function generateRLSForEntities(entities: Entity[]): string {
-  const results = entities.map(entity => generateRLS(entity));
-  return results.filter(sql => sql.length > 0).join('\n\n');
+  const results = entities.map((entity) => generateRLS(entity));
+  return results.filter((sql) => sql.length > 0).join('\n\n');
 }

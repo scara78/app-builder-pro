@@ -6,14 +6,14 @@
 /**
  * Creates a mock project creation response
  */
-export function createProjectMock(name: string, region: string) {
+export function createProjectMock(name: string, _region?: string) {
   const ref = generateRef();
   return {
     ref,
     name,
     apiUrl: `https://${ref}.supabase.co`,
     anonKey: generateAnonKey(ref),
-    status: 'ACTIVE'
+    status: 'ACTIVE',
   };
 }
 
@@ -41,8 +41,8 @@ export function getAnonKeyMock(ref: string): { anonKey: string } | { error: stri
  * Creates a mock migration response
  */
 export function applyMigrationMock(
-  ref: string, 
-  _sql: string, 
+  ref: string,
+  _sql: string,
   name: string
 ): { success: boolean; migrationId: string } | { error: string } {
   if (!ref || ref === 'invalid-ref') {
@@ -50,7 +50,7 @@ export function applyMigrationMock(
   }
   return {
     success: true,
-    migrationId: `migration_${Date.now()}_${name}`
+    migrationId: `migration_${Date.now()}_${name}`,
   };
 }
 
@@ -66,10 +66,12 @@ function generateRef(): string {
  */
 function generateAnonKey(ref: string): string {
   const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const payload = btoa(JSON.stringify({ 
-    aud: ref, 
-    exp: Math.floor(Date.now() / 1000) + 3600 
-  }));
+  const payload = btoa(
+    JSON.stringify({
+      aud: ref,
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    })
+  );
   const signature = 'mock_signature';
   return `${header}.${payload}.${signature}`;
 }
@@ -81,22 +83,22 @@ export const mockErrorResponses = {
   authError: {
     error: 'Unauthorized',
     code: 'AUTH',
-    message: 'Invalid or expired access token'
+    message: 'Invalid or expired access token',
   },
   rateLimitError: (retryAfter: number) => ({
     error: 'Rate limit exceeded',
     code: 'RATE_LIMIT',
-    retryAfter
+    retryAfter,
   }),
   notFoundError: {
     error: 'Project not found',
-    code: 'NOT_FOUND'
+    code: 'NOT_FOUND',
   },
   validationError: (details: string) => ({
     error: 'Validation failed',
     code: 'VALIDATION',
-    details
-  })
+    details,
+  }),
 };
 
 /**
@@ -107,14 +109,14 @@ export const sampleProjects = [
     ref: 'abc123def4',
     name: 'my-first-app',
     apiUrl: 'https://abc123def4.supabase.co',
-    status: 'ACTIVE'
+    status: 'ACTIVE',
   },
   {
     ref: 'xyz789uvw',
     name: 'production-app',
     apiUrl: 'https://xyz789uvw.supabase.co',
-    status: 'ACTIVE'
-  }
+    status: 'ACTIVE',
+  },
 ];
 
 /**
@@ -127,7 +129,7 @@ export const sampleMigrations = [
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   email VARCHAR(255) UNIQUE NOT NULL,
   created_at TIMESTAMP DEFAULT NOW()
-);`
+);`,
   },
   {
     name: 'create_products_table',
@@ -136,6 +138,6 @@ export const sampleMigrations = [
   name VARCHAR(255) NOT NULL,
   price DECIMAL(10, 2) NOT NULL,
   created_at TIMESTAMP DEFAULT NOW()
-);`
-  }
+);`,
+  },
 ];

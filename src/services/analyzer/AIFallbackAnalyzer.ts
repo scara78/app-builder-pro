@@ -5,14 +5,13 @@
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import type { 
-  BackendRequirements, 
-  Entity, 
+import type {
+  BackendRequirements,
+  Entity,
   EntityField,
-  AuthRequirement, 
+  AuthRequirement,
   StorageRequirement,
   CRUDSOperation,
-  AnalysisMethod 
 } from './types';
 
 /**
@@ -66,7 +65,7 @@ export class AIFallbackAnalyzer {
    */
   async analyze(code: string): Promise<BackendRequirements> {
     const prompt = this.buildPrompt(code);
-    
+
     // Create timeout controller
     const timeoutController = new AbortController();
     const timeoutId = setTimeout(() => {
@@ -75,25 +74,25 @@ export class AIFallbackAnalyzer {
 
     try {
       const model = this.genAI.getGenerativeModel({ model: this.modelId });
-      
+
       const result = await model.generateContent(prompt, {
-        signal: timeoutController.signal
+        signal: timeoutController.signal,
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       const response = await result.response;
       const text = response.text();
-      
+
       return this.parseResponse(text);
     } catch (error) {
       clearTimeout(timeoutId);
-      
+
       // Check if it was a timeout
       if (error instanceof Error && error.name === 'AbortError') {
         return this.handleTimeout();
       }
-      
+
       return this.handleError(error instanceof Error ? error : new Error(String(error)));
     }
   }
@@ -117,13 +116,13 @@ export class AIFallbackAnalyzer {
     try {
       // Try to extract JSON from response
       const jsonMatch = response.match(/\{[\s\S]*\}/);
-      
+
       if (!jsonMatch) {
         return this.handleMalformedResponse();
       }
-      
+
       const parsed = JSON.parse(jsonMatch[0]);
-      
+
       // Validate and transform to our types
       return this.transformResponse(parsed);
     } catch {
@@ -157,7 +156,7 @@ export class AIFallbackAnalyzer {
   /**
    * Create a fallback result with zero confidence
    */
-  private createFallbackResult(reason: string): BackendRequirements {
+  private createFallbackResult(_reason: string): BackendRequirements {
     return {
       entities: [],
       hasAuth: false,
@@ -167,7 +166,7 @@ export class AIFallbackAnalyzer {
       crudOperations: [],
       overallConfidence: 0,
       analysisMethod: 'ai',
-      analyzedAt: new Date().toISOString()
+      analyzedAt: new Date().toISOString(),
     };
   }
 
@@ -179,13 +178,15 @@ export class AIFallbackAnalyzer {
     const entities: Entity[] = (parsed.entities ?? []).map((e: any) => ({
       name: e.name ?? 'Unknown',
       typeName: e.name ?? 'Unknown',
-      fields: (e.fields ?? []).map((f: any): EntityField => ({
-        name: f.name ?? '',
-        type: f.type ?? 'string',
-        isOptional: f.isOptional ?? false
-      })),
+      fields: (e.fields ?? []).map(
+        (f: any): EntityField => ({
+          name: f.name ?? '',
+          type: f.type ?? 'string',
+          isOptional: f.isOptional ?? false,
+        })
+      ),
       confidence: e.confidence ?? 50,
-      matchType: 'ai' as const
+      matchType: 'ai' as const,
     }));
 
     // Transform auth requirements
@@ -193,24 +194,26 @@ export class AIFallbackAnalyzer {
       type: a.type ?? 'login',
       triggerPattern: 'AI',
       userFields: a.userFields,
-      confidence: a.confidence ?? 50
+      confidence: a.confidence ?? 50,
     }));
 
-    // Transform storage requirements  
-    const storageRequirements: StorageRequirement[] = (parsed.storageRequirements ?? []).map((s: any) => ({
-      contentType: s.contentType ?? 'any',
-      maxSizeMB: s.maxSizeMB,
-      bucketName: s.bucketName,
-      triggerPattern: 'AI',
-      confidence: s.confidence ?? 50
-    }));
+    // Transform storage requirements
+    const storageRequirements: StorageRequirement[] = (parsed.storageRequirements ?? []).map(
+      (s: any) => ({
+        contentType: s.contentType ?? 'any',
+        maxSizeMB: s.maxSizeMB,
+        bucketName: s.bucketName,
+        triggerPattern: 'AI',
+        confidence: s.confidence ?? 50,
+      })
+    );
 
     // Transform CRUD operations
     const crudOperations: CRUDSOperation[] = (parsed.crudOperations ?? []).map((c: any) => ({
       entity: c.entity ?? 'Unknown',
       operation: c.operation ?? 'read',
       triggerPattern: 'AI',
-      confidence: c.confidence ?? 50
+      confidence: c.confidence ?? 50,
     }));
 
     return {
@@ -222,7 +225,7 @@ export class AIFallbackAnalyzer {
       crudOperations,
       overallConfidence: parsed.overallConfidence ?? 50,
       analysisMethod: 'ai',
-      analyzedAt: new Date().toISOString()
+      analyzedAt: new Date().toISOString(),
     };
   }
 }

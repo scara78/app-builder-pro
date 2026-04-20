@@ -5,7 +5,7 @@
 /**
  * Available Supabase regions for project creation
  */
-export type Region = 
+export type Region =
   | 'us-east-1'
   | 'us-west-2'
   | 'eu-west-1'

@@ -27,11 +27,7 @@
  * ```
  */
 
-// Cliente oficial de Supabase (para queries a la base de datos)
-export { getSupabaseClient, resetSupabaseClient, supabase } from './client';
-export type { SupabaseClient } from './client';
 
-// MCP Client (para gestión de proyectos)
 export { SupabaseMCPClient, createMCPClient } from './MCPClient';
 
 // Error classes
@@ -43,7 +39,7 @@ export {
   MCPNotFoundError,
   MCPValidationError,
   MCPTimeoutError,
-  mapHttpError
+  mapHttpError,
 } from './errors';
 
 // Retry utilities
@@ -60,7 +56,7 @@ export type {
   ProjectCredentials,
   MCPRequest,
   MCPResponse,
-  MCPErrorResponse
+  MCPErrorResponse,
 } from './types';
 
 // Constants
@@ -73,5 +69,5 @@ export {
   REGIONS,
   RETRYABLE_STATUS_CODES,
   NON_RETRYABLE_STATUS_CODES,
-  ERROR_CODES
+  ERROR_CODES,
 } from './constants';

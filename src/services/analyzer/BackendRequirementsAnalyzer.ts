@@ -4,14 +4,14 @@
  * Hybrid orchestration combining pattern matching, AI fallback, and caching
  */
 
-import type { 
-  BackendRequirements, 
-  Entity, 
-  AuthRequirement, 
+import type {
+  BackendRequirements,
+  Entity,
+  AuthRequirement,
   StorageRequirement,
   CRUDSOperation,
   DetectionResult,
-  AnalysisMethod 
+  AnalysisMethod,
 } from './types';
 import { PatternMatcher, type PatternAnalysis } from './PatternMatcher';
 import { ConfidenceCalculator } from './confidence';
@@ -32,14 +32,9 @@ export interface AnalyzerOptions {
   cache?: AnalysisCache;
   /** Whether to use caching (default: false) */
   useCache?: boolean;
-  /** AI threshold for fallback (default: 80) */
+  /** AI threshold for fallback (reserved for future use) */
   aiThreshold?: number;
 }
-
-/**
- * Default AI threshold for triggering fallback
- */
-const DEFAULT_AI_THRESHOLD = 80;
 
 /**
  * Analysis result with all combined data
@@ -65,7 +60,6 @@ export class BackendRequirementsAnalyzer {
   private aiFallback: AIFallbackAnalyzer | null;
   private cache: AnalysisCache | null;
   private useCache: boolean;
-  private aiThreshold: number;
 
   /**
    * Create a new BackendRequirementsAnalyzer
@@ -79,7 +73,7 @@ export class BackendRequirementsAnalyzer {
    * ```typescript
    * // Default analyzer with pattern matching only
    * const analyzer = new BackendRequirementsAnalyzer();
-   * 
+   *
    * // Full analyzer with AI fallback and caching
    * const analyzer = new BackendRequirementsAnalyzer({
    *   aiFallback: new AIFallbackAnalyzer(apiKey),
@@ -95,7 +89,6 @@ export class BackendRequirementsAnalyzer {
     this.aiFallback = options?.aiFallback ?? null;
     this.cache = options?.cache ?? null;
     this.useCache = options?.useCache ?? false;
-    this.aiThreshold = options?.aiThreshold ?? DEFAULT_AI_THRESHOLD;
   }
 
   /**
@@ -115,12 +108,12 @@ export class BackendRequirementsAnalyzer {
    *   aiFallback: new AIFallbackAnalyzer(apiKey),
    *   useCache: true
    * });
-   * 
+   *
    * const requirements = await analyzer.analyze(`
    *   interface User { id: string; email: string; }
    *   function Login() { return <form>...</form>; }
    * `);
-   * 
+   *
    * console.log(requirements.entities, requirements.hasAuth, requirements.overallConfidence);
    * ```
    */
@@ -146,7 +139,7 @@ export class BackendRequirementsAnalyzer {
 
     // Step 4: Determine if we need AI fallback
     let finalResult: AnalysisResult;
-    
+
     if (this.confidenceCalculator.shouldTriggerAIFallback(initialConfidence) && this.aiFallback) {
       // Hybrid mode: pattern + AI
       finalResult = await this.runHybridAnalysis(code, patternResult);
@@ -165,7 +158,7 @@ export class BackendRequirementsAnalyzer {
       crudOperations: finalResult.crudOperations,
       overallConfidence: finalResult.overallConfidence,
       analysisMethod: finalResult.analysisMethod,
-      analyzedAt: new Date().toISOString()
+      analyzedAt: new Date().toISOString(),
     };
 
     // Step 6: Cache result if enabled
@@ -174,7 +167,7 @@ export class BackendRequirementsAnalyzer {
         sourceHash: this.cache.generateKey(code),
         detected: finalResult.entities.length > 0 || finalResult.hasAuth || finalResult.hasStorage,
         requirements,
-        cachedAt: new Date().toISOString()
+        cachedAt: new Date().toISOString(),
       };
       this.cache.set(code, detectionResult);
     }
@@ -185,19 +178,25 @@ export class BackendRequirementsAnalyzer {
   /**
    * Run hybrid analysis combining pattern and AI results
    */
-  private async runHybridAnalysis(code: string, patternResult: PatternAnalysis): Promise<AnalysisResult> {
+  private async runHybridAnalysis(
+    code: string,
+    patternResult: PatternAnalysis
+  ): Promise<AnalysisResult> {
     if (!this.aiFallback) {
       return this.combineResults(patternResult, 'pattern');
     }
 
     try {
       const aiResult = await this.aiFallback.analyze(code);
-      
+
       // Combine pattern and AI results
       return this.mergeResults(patternResult, aiResult, 'hybrid');
     } catch (error) {
       // If AI fails, fall back to pattern-only
-      console.warn('[BackendRequirementsAnalyzer] AI fallback failed, using pattern results:', error);
+      console.warn(
+        '[BackendRequirementsAnalyzer] AI fallback failed, using pattern results:',
+        error
+      );
       return this.combineResults(patternResult, 'pattern');
     }
   }
@@ -208,7 +207,7 @@ export class BackendRequirementsAnalyzer {
   private combineResults(patternResult: PatternAnalysis, method: AnalysisMethod): AnalysisResult {
     const hasAuth = patternResult.authRequirements.length > 0;
     const hasStorage = patternResult.storageRequirements.length > 0;
-    
+
     return {
       entities: patternResult.entities,
       authRequirements: patternResult.authRequirements,
@@ -217,23 +216,27 @@ export class BackendRequirementsAnalyzer {
       hasAuth,
       hasStorage,
       overallConfidence: patternResult.overallConfidence,
-      analysisMethod: method
+      analysisMethod: method,
     };
   }
 
   /**
    * Merge pattern and AI results (hybrid mode)
    */
-  private mergeResults(patternResult: PatternAnalysis, aiResult: BackendRequirements, method: AnalysisMethod): AnalysisResult {
+  private mergeResults(
+    patternResult: PatternAnalysis,
+    aiResult: BackendRequirements,
+    method: AnalysisMethod
+  ): AnalysisResult {
     // Prefer pattern results if they have higher confidence
     // Merge entities, deduplicating by name
     const entityMap = new Map<string, Entity>();
-    
+
     // Add pattern entities first (higher confidence typically)
     for (const entity of patternResult.entities) {
       entityMap.set(entity.name, entity);
     }
-    
+
     // Add AI entities that don't exist
     for (const entity of aiResult.entities) {
       if (!entityMap.has(entity.name)) {
@@ -242,15 +245,17 @@ export class BackendRequirementsAnalyzer {
     }
 
     // Merge auth - use whichever is higher confidence
-    const authRequirements = patternResult.authRequirements.length > 0 
-      ? patternResult.authRequirements 
-      : aiResult.authRequirements ?? [];
-    
+    const authRequirements =
+      patternResult.authRequirements.length > 0
+        ? patternResult.authRequirements
+        : (aiResult.authRequirements ?? []);
+
     // Merge storage
-    const storageRequirements = patternResult.storageRequirements.length > 0 
-      ? patternResult.storageRequirements 
-      : aiResult.storageRequirements ?? [];
-    
+    const storageRequirements =
+      patternResult.storageRequirements.length > 0
+        ? patternResult.storageRequirements
+        : (aiResult.storageRequirements ?? []);
+
     // Merge CRUD operations
     const crudMap = new Map<string, CRUDSOperation>();
     for (const op of patternResult.crudOperations) {
@@ -270,7 +275,7 @@ export class BackendRequirementsAnalyzer {
       hasAuth: authRequirements.length > 0,
       hasStorage: storageRequirements.length > 0,
       overallConfidence: Math.max(patternResult.overallConfidence, aiResult.overallConfidence),
-      analysisMethod: method
+      analysisMethod: method,
     };
   }
 
@@ -287,7 +292,7 @@ export class BackendRequirementsAnalyzer {
       crudOperations: [],
       overallConfidence: 0,
       analysisMethod: 'pattern',
-      analyzedAt: new Date().toISOString()
+      analyzedAt: new Date().toISOString(),
     };
   }
 }
@@ -295,6 +300,8 @@ export class BackendRequirementsAnalyzer {
 /**
  * Factory function to create a BackendRequirementsAnalyzer
  */
-export function createBackendRequirementsAnalyzer(options?: AnalyzerOptions): BackendRequirementsAnalyzer {
+export function createBackendRequirementsAnalyzer(
+  options?: AnalyzerOptions
+): BackendRequirementsAnalyzer {
   return new BackendRequirementsAnalyzer(options);
 }

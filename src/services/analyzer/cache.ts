@@ -34,7 +34,7 @@ export class AnalysisCache {
    * ```typescript
    * // Default: 5 minute TTL
    * const cache = new AnalysisCache();
-   * 
+   *
    * // Custom: 10 minute TTL
    * const cache = new AnalysisCache(600000);
    * ```
@@ -119,7 +119,7 @@ export class AnalysisCache {
       key,
       result,
       createdAt: Date.now(),
-      ttl: this.defaultTTL
+      ttl: this.defaultTTL,
     });
   }
 

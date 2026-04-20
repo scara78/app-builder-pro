@@ -3,23 +3,9 @@
  * HTTP client for interacting with Supabase MCP server
  */
 
-import type { 
-  MCPClientConfig, 
-  SupabaseProject, 
-  Region,
-  MCPResponse 
-} from './types';
-import { 
-  DEFAULT_MCP_ENDPOINT, 
-  DEFAULT_TIMEOUT,
-  DEFAULT_MAX_RETRIES 
-} from './constants';
-import { 
-  MCPAuthError,
-  MCPNotFoundError,
-  MCPValidationError,
-  mapHttpError 
-} from './errors';
+import type { MCPClientConfig, SupabaseProject, Region, MCPResponse } from './types';
+import { DEFAULT_MCP_ENDPOINT, DEFAULT_TIMEOUT, DEFAULT_MAX_RETRIES } from './constants';
+import { MCPAuthError, MCPValidationError, mapHttpError } from './errors';
 import { withRetry } from './retry';
 
 /**
@@ -46,51 +32,50 @@ export class SupabaseMCPClient {
   /**
    * Make a retryable HTTP request to the MCP server
    */
-  private async request<T>(
-    method: string,
-    path: string,
-    body?: unknown
-  ): Promise<T> {
+  private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
     const url = `${this.baseUrl}${path}`;
-    
-    return withRetry(async () => {
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.accessToken}`
-        },
-        body: body ? JSON.stringify(body) : undefined,
-        signal: AbortSignal.timeout(this.timeout)
-      });
 
-      if (!response.ok) {
-        const errorBody = await response.json().catch(() => ({}));
-        const message = errorBody.message || errorBody.error || `HTTP ${response.status}`;
-        
-        throw mapHttpError(response.status, message, { 
-          status: response.status,
-          ...errorBody 
+    return withRetry(
+      async () => {
+        const response = await fetch(url, {
+          method,
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${this.accessToken}`,
+          },
+          body: body ? JSON.stringify(body) : undefined,
+          signal: AbortSignal.timeout(this.timeout),
         });
-      }
 
-      const data = await response.json() as MCPResponse<T>;
-      
-      if (data.error) {
-        throw mapHttpError(
-          parseInt(data.error.code) || 500,
-          data.error.message,
-          data.error.data as Record<string, unknown>
-        );
-      }
+        if (!response.ok) {
+          const errorBody = await response.json().catch(() => ({}));
+          const message = errorBody.message || errorBody.error || `HTTP ${response.status}`;
 
-      return data.result as T;
-    }, {
-      maxRetries: this.maxRetries,
-      onRetry: (attempt, error) => {
-        console.log(`Retry attempt ${attempt}:`, error.message);
+          throw mapHttpError(response.status, message, {
+            status: response.status,
+            ...errorBody,
+          });
+        }
+
+        const data = (await response.json()) as MCPResponse<T>;
+
+        if (data.error) {
+          throw mapHttpError(
+            parseInt(data.error.code) || 500,
+            data.error.message,
+            data.error.data as Record<string, unknown>
+          );
+        }
+
+        return data.result as T;
+      },
+      {
+        maxRetries: this.maxRetries,
+        onRetry: (attempt, error) => {
+          console.log(`Retry attempt ${attempt}:`, error.message);
+        },
       }
-    });
+    );
   }
 
   /**
@@ -104,20 +89,22 @@ export class SupabaseMCPClient {
     // Attempt with original name
     let attempts = 0;
     const maxAttempts = 5;
-    
+
     while (attempts < maxAttempts) {
       try {
-        const result = await this.request<SupabaseProject>(
-          'POST',
-          '/api/mcp/create_project',
-          { name, region }
-        );
+        const result = await this.request<SupabaseProject>('POST', '/api/mcp/create_project', {
+          name,
+          region,
+        });
         return result;
       } catch (error) {
         // Check if it's a 409 conflict (mapped to MCPValidationError with field='name')
-        if (error instanceof MCPValidationError && 
-            error.field === 'name' &&
-            error.message.includes('exists')) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        if (
+          err instanceof MCPValidationError &&
+          err.field === 'name' &&
+          err.message.includes('exists')
+        ) {
           // Append suffix and retry
           attempts++;
           const suffix = attempts;
@@ -128,13 +115,9 @@ export class SupabaseMCPClient {
         }
       }
     }
-    
+
     // If we hit max attempts, try one more time (will throw if still failing)
-    return this.request<SupabaseProject>(
-      'POST',
-      '/api/mcp/create_project',
-      { name, region }
-    );
+    return this.request<SupabaseProject>('POST', '/api/mcp/create_project', { name, region });
   }
 
   /**
@@ -143,10 +126,7 @@ export class SupabaseMCPClient {
    * @returns Project API URL
    */
   async getProjectUrl(projectRef: string): Promise<string> {
-    const result = await this.request<{ url: string }>(
-      'GET',
-      `/api/mcp/project/${projectRef}/url`
-    );
+    const result = await this.request<{ url: string }>('GET', `/api/mcp/project/${projectRef}/url`);
 
     return result.url;
   }
@@ -172,16 +152,11 @@ export class SupabaseMCPClient {
    * @param name - Migration name
    * @returns void on success
    */
-  async applyMigration(
-    projectRef: string, 
-    sql: string, 
-    name: string
-  ): Promise<void> {
-    await this.request<{ success: boolean }>(
-      'POST',
-      `/api/mcp/project/${projectRef}/migration`,
-      { sql, name }
-    );
+  async applyMigration(projectRef: string, sql: string, name: string): Promise<void> {
+    await this.request<{ success: boolean }>('POST', `/api/mcp/project/${projectRef}/migration`, {
+      sql,
+      name,
+    });
   }
 
   /**
@@ -189,10 +164,7 @@ export class SupabaseMCPClient {
    * @returns Array of projects
    */
   async listProjects(): Promise<SupabaseProject[]> {
-    const result = await this.request<{ projects: SupabaseProject[] }>(
-      'GET',
-      '/api/mcp/projects'
-    );
+    const result = await this.request<{ projects: SupabaseProject[] }>('GET', '/api/mcp/projects');
 
     return result.projects;
   }

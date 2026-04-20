@@ -1,6 +1,6 @@
 /**
  * TypeMapping Test Suite
- * 
+ *
  * Tests for TypeScript to PostgreSQL type mapping.
  * Following Strict TDD - tests written first.
  */
@@ -47,7 +47,7 @@ describe('TypeMapping', () => {
 
     // TM-H006: Nullable field handling
     it('should handle nullable fields', () => {
-      expect(getPostgresType('string', true)).toBe('TEXT');
+      expect(getPostgresType('string')).toBe('TEXT');
     });
 
     // TM-E001: Unknown type default

@@ -14,7 +14,13 @@ export { SQLGenerator } from './SQLGenerator';
 export { MigrationBuilder, build } from './MigrationBuilder';
 
 // Type exports (nota: ISQLGenerator es la interfaz, SQLGenerator es la clase)
-export type { MigrationResult, SQLGeneratorConfig, SQLGenerator as ISQLGenerator, TypeMappingConfig, RLSPolicy } from './types';
+export type {
+  MigrationResult,
+  SQLGeneratorConfig,
+  SQLGenerator as ISQLGenerator,
+  TypeMappingConfig,
+  RLSPolicy,
+} from './types';
 
 // TypeMapping exports
 export { getPostgresType, typeMap } from './TypeMapping';

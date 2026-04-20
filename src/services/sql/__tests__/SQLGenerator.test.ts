@@ -1,6 +1,6 @@
 /**
  * SQLGenerator Test Suite
- * 
+ *
  * Tests for the main SQL generator entry point.
  * Following Strict TDD - tests written first.
  */
@@ -264,14 +264,14 @@ describe('SQLGenerator', () => {
 
     // SG-ERR001: Null input
     it('should throw TypeError for null input', () => {
-      expect(() => generator.generate(null as unknown as BackendRequirements))
-        .toThrow(TypeError);
+      expect(() => generator.generate(null as unknown as BackendRequirements)).toThrow(TypeError);
     });
 
     // SG-ERR001: Undefined input
     it('should throw TypeError for undefined input', () => {
-      expect(() => generator.generate(undefined as unknown as BackendRequirements))
-        .toThrow(TypeError);
+      expect(() => generator.generate(undefined as unknown as BackendRequirements)).toThrow(
+        TypeError
+      );
     });
   });
 
@@ -316,9 +316,7 @@ describe('SQLGenerator', () => {
           {
             name: 'Product',
             typeName: 'Product',
-            fields: [
-              { name: 'data', type: 'UnknownType', isOptional: false },
-            ],
+            fields: [{ name: 'data', type: 'UnknownType', isOptional: false }],
             confidence: 90,
             matchType: 'pattern',
           },

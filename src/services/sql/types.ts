@@ -1,11 +1,11 @@
 /**
  * SQL Schema Generator Types
- * 
+ *
  * Shared TypeScript interfaces for SQL schema generation.
  * These types define the contract between the SQL generator and its consumers.
  */
 
-import type { BackendRequirements, Entity, StorageRequirement } from '../analyzer/types';
+import type { BackendRequirements } from '../analyzer/types';
 
 /**
  * Result of a migration generation operation.
@@ -38,7 +38,7 @@ export interface SQLGeneratorConfig {
 export interface SQLGenerator {
   /**
    * Generate PostgreSQL DDL from backend requirements.
-   * 
+   *
    * @param requirements - The backend requirements to convert
    * @returns MigrationResult containing the SQL, tables, and warnings
    */

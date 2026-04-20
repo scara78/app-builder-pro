@@ -33,7 +33,7 @@ export const typeMap: Record<string, string> = {
   [TS_TYPE.NUMBER]: PG_TYPE.INTEGER,
   [TS_TYPE.BOOLEAN]: PG_TYPE.BOOLEAN,
   [TS_TYPE.DATE]: PG_TYPE.TIMESTAMPTZ,
-  'timestamp': PG_TYPE.TIMESTAMPTZ,
+  timestamp: PG_TYPE.TIMESTAMPTZ,
   [TS_TYPE.JSON]: PG_TYPE.JSONB,
 };
 
@@ -58,7 +58,6 @@ type Logger = (warning: string) => void;
  */
 export function getPostgresType(
   typescriptType: string,
-  nullable?: boolean,
   logger?: Logger
 ): string {
   // TM-ERR001 & TM-ERR002: Throw TypeError for null/undefined
@@ -78,7 +77,10 @@ export function getPostgresType(
 
   // Check for exact match in typeMap
   // Handle both lowercase and original case
-  let pgType = typeMap[typescriptType] || typeMap[normalizedType] || typeMap[normalizedType.charAt(0).toUpperCase() + normalizedType.slice(1)];
+  let pgType =
+    typeMap[typescriptType] ||
+    typeMap[normalizedType] ||
+    typeMap[normalizedType.charAt(0).toUpperCase() + normalizedType.slice(1)];
 
   // TM-E001 & TM-008: Unknown types default to TEXT with warning
   if (!pgType) {

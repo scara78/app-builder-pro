@@ -111,7 +111,11 @@ export class MCPTimeoutError extends MCPError {
 /**
  * Map HTTP status codes to MCP error types
  */
-export function mapHttpError(status: number, message: string, context?: Record<string, unknown>): MCPError {
+export function mapHttpError(
+  status: number,
+  message: string,
+  context?: Record<string, unknown>
+): MCPError {
   switch (status) {
     case 401:
     case 403:

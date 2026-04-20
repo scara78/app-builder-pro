@@ -4,13 +4,20 @@
  * Hybrid orchestration combining pattern matching, AI fallback, and caching
  */
 
-export { BackendRequirementsAnalyzer, createBackendRequirementsAnalyzer } from './BackendRequirementsAnalyzer';
+export {
+  BackendRequirementsAnalyzer,
+  createBackendRequirementsAnalyzer,
+} from './BackendRequirementsAnalyzer';
 export type { AnalyzerOptions } from './BackendRequirementsAnalyzer';
 
 export { PatternMatcher } from './PatternMatcher';
 export type { MatcherPatterns, PatternAnalysis } from './PatternMatcher';
 
-export { ConfidenceCalculator, createConfidenceCalculator, CONFIDENCE_THRESHOLD } from './confidence';
+export {
+  ConfidenceCalculator,
+  createConfidenceCalculator,
+  CONFIDENCE_THRESHOLD,
+} from './confidence';
 
 export { AIFallbackAnalyzer, createAIFallbackAnalyzer } from './AIFallbackAnalyzer';
 
@@ -32,5 +39,5 @@ export type {
   EntityPattern,
   AuthPattern,
   StoragePattern,
-  CRUDPattern
+  CRUDPattern,
 } from './types';

@@ -1,9 +1,9 @@
 /**
  * MigrationBuilder Module
- * 
+ *
  * Composes SQL from multiple generators.
  * Orchestrates the creation of complete migration files with proper ordering.
- * 
+ *
  * Order of SQL execution:
  * 1. Extensions (CREATE EXTENSION)
  * 2. Tables (CREATE TABLE)
@@ -11,7 +11,7 @@
  * 4. Storage buckets (INSERT)
  */
 
-import type { BackendRequirements, Entity, StorageRequirement } from '../analyzer/types';
+import type { BackendRequirements, Entity } from '../analyzer/types';
 import type { MigrationResult, SQLGeneratorConfig } from './types';
 import { getPostgresType } from './TypeMapping';
 import { generateRLS } from './RLSPolicyGenerator';
@@ -19,7 +19,7 @@ import { generateBuckets } from './StorageBucketGenerator';
 
 /**
  * MigrationBuilder
- * 
+ *
  * Composes complete migration SQL from backend requirements.
  * Orchestrates all sub-generators and ensures correct ordering.
  */
@@ -28,7 +28,7 @@ export class MigrationBuilder {
 
   /**
    * Create a MigrationBuilder instance.
-   * 
+   *
    * @param config - Optional configuration options
    */
   constructor(config?: SQLGeneratorConfig) {
@@ -41,7 +41,7 @@ export class MigrationBuilder {
 
   /**
    * Build a complete migration SQL from requirements.
-   * 
+   *
    * @param requirements - Backend requirements from analyzer
    * @returns MigrationResult with SQL, tables, and warnings
    */
@@ -57,7 +57,7 @@ export class MigrationBuilder {
     if (requirements.entities && requirements.entities.length > 0) {
       const tableSQL = this.generateTables(requirements.entities, warnings);
       sqlParts.push(tableSQL);
-      
+
       for (const entity of requirements.entities) {
         tables.push(entity.name);
       }
@@ -65,7 +65,7 @@ export class MigrationBuilder {
 
     // 3. RLS (per table, after table creation)
     if (this.config.enableRLS && requirements.entities && requirements.entities.length > 0) {
-      const rlsSQL = this.generateRLS(requirements.entities, warnings);
+      const rlsSQL = this.generateRLS(requirements.entities);
       if (rlsSQL) {
         sqlParts.push(rlsSQL);
       }
@@ -110,7 +110,7 @@ export class MigrationBuilder {
   /**
    * Generate CREATE TABLE for a single entity.
    */
-  private generateTableSQL(entity: Entity, warnings: string[]): string {
+  private generateTableSQL(entity: Entity, _warnings: string[]): string {
     const tableName = entity.name;
     const columns: string[] = [];
 
@@ -119,27 +119,16 @@ export class MigrationBuilder {
     columns.push('created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()');
     columns.push('updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()');
 
-    // Add entity fields
-    for (const field of entity.fields) {
-      // Skip id as we already added it
-      if (field.name === 'id') continue;
-      
-      let pgType: string;
-      try {
-        pgType = getPostgresType(field.type, field.isOptional, this.config.logger);
-      } catch (error) {
-        // Unknown type fallback to TEXT
-        pgType = 'TEXT';
-        const warning = `Unknown type "${field.type}" for field "${field.name}", defaulting to TEXT`;
-        warnings.push(warning);
-        if (this.config.logger) {
-          this.config.logger(warning);
-        }
-      }
+  // Add entity fields
+  for (const field of entity.fields) {
+    // Skip id as we already added it
+    if (field.name === 'id') continue;
 
-      const nullable = field.isOptional ? '' : 'NOT NULL';
-      columns.push(`${field.name} ${pgType} ${nullable}`.trim());
-    }
+    // getPostgresType handles unknown types gracefully (logs warning, returns TEXT)
+    const pgType = getPostgresType(field.type, this.config.logger);
+    const nullable = field.isOptional ? '' : 'NOT NULL';
+    columns.push(`${field.name} ${pgType} ${nullable}`.trim());
+  }
 
     return `CREATE TABLE IF NOT EXISTS ${tableName} (
   ${columns.join(',\n  ')}
@@ -149,7 +138,7 @@ export class MigrationBuilder {
   /**
    * Generate RLS policies for all entities.
    */
-  private generateRLS(entities: Entity[], warnings: string[]): string {
+  private generateRLS(entities: Entity[]): string {
     const policyStatements: string[] = [];
 
     for (const entity of entities) {
@@ -165,10 +154,10 @@ export class MigrationBuilder {
 
 /**
  * Build a migration from BackendRequirements.
- * 
+ *
  * @param requirements - Backend requirements from analyzer
  * @returns MigrationResult with SQL, tables, and warnings
- * 
+ *
  * @example
  * const requirements = { entities: [...], storageRequirements: [...] };
  * const result = build(requirements);

@@ -1,6 +1,6 @@
 /**
  * Integration Test Suite
- * 
+ *
  * End-to-end tests for the complete SQL generation pipeline.
  * Tests the full flow from BackendRequirements to MigrationResult.
  */
@@ -50,10 +50,10 @@ describe('SQL Integration Tests', () => {
     expect(result.sql).toContain('name TEXT');
     expect(result.sql).toContain('age INTEGER');
     expect(result.sql).toContain('isActive BOOLEAN NOT NULL');
-    
+
     // Verify RLS
     expect(result.sql).toContain('ALTER TABLE users ENABLE ROW LEVEL SECURITY');
-    
+
     // Verify tables list
     expect(result.tables).toEqual(['users']);
   });
@@ -110,12 +110,12 @@ describe('SQL Integration Tests', () => {
     expect(result.sql).toContain('CREATE TABLE IF NOT EXISTS users');
     expect(result.sql).toContain('CREATE TABLE IF NOT EXISTS posts');
     expect(result.sql).toContain('CREATE TABLE IF NOT EXISTS comments');
-    
+
     // All tables should have RLS
     expect(result.sql).toMatch(/ALTER TABLE users ENABLE ROW LEVEL SECURITY/);
     expect(result.sql).toMatch(/ALTER TABLE posts ENABLE ROW LEVEL SECURITY/);
     expect(result.sql).toMatch(/ALTER TABLE comments ENABLE ROW LEVEL SECURITY/);
-    
+
     // Verify tables list
     expect(result.tables).toHaveLength(3);
     expect(result.tables).toContain('users');
@@ -204,7 +204,12 @@ describe('SQL Integration Tests', () => {
         },
       ],
       crudOperations: [
-        { entity: 'profiles', operation: 'create', triggerPattern: 'createProfile', confidence: 85 },
+        {
+          entity: 'profiles',
+          operation: 'create',
+          triggerPattern: 'createProfile',
+          confidence: 85,
+        },
         { entity: 'posts', operation: 'read', triggerPattern: 'getPosts', confidence: 90 },
       ],
       overallConfidence: 90,
@@ -218,15 +223,15 @@ describe('SQL Integration Tests', () => {
     expect(result.sql).toContain('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
     expect(result.sql).toContain('CREATE TABLE IF NOT EXISTS profiles');
     expect(result.sql).toContain('CREATE TABLE IF NOT EXISTS posts');
-    
+
     // Verify RLS on both tables
     expect(result.sql).toMatch(/ALTER TABLE profiles ENABLE ROW LEVEL SECURITY/);
     expect(result.sql).toMatch(/ALTER TABLE posts ENABLE ROW LEVEL SECURITY/);
-    
+
     // Verify storage buckets
     expect(result.sql).toContain('INSERT INTO storage.buckets');
     expect(result.sql).toContain('images');
-    
+
     // Verify table list
     expect(result.tables).toHaveLength(2);
     expect(result.tables).toContain('profiles');
@@ -329,9 +334,9 @@ describe('SQL Integration Tests', () => {
 
     // Basic SQL syntax validation
     // All statements should end with semicolon
-    const statements = result.sql.split(';').filter(s => s.trim().length > 0);
+    const statements = result.sql.split(';').filter((s) => s.trim().length > 0);
     expect(statements.length).toBeGreaterThan(0);
-    
+
     // Should contain required keywords
     expect(result.sql).toContain('CREATE');
     expect(result.sql).toContain('TABLE');

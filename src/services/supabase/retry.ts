@@ -2,7 +2,7 @@
  * Retry logic with exponential backoff and jitter
  */
 
-import { MCPError, MCPNetworkError, MCPAuthError, MCPValidationError } from './errors';
+import { MCPError, MCPNetworkError, MCPValidationError } from './errors';
 import { DEFAULT_MAX_RETRIES, DEFAULT_RETRY_DELAY_BASE, MAX_JITTER_MS } from './constants';
 
 export interface RetryOptions {
@@ -55,11 +55,6 @@ export function isRetryable(error: Error): boolean {
     return error.isRetryable();
   }
 
-  // Auth and validation errors are never retryable
-  if (error instanceof MCPAuthError) {
-    return false;
-  }
-
   // For unknown errors, assume they might be transient
   return true;
 }
@@ -70,14 +65,10 @@ export function isRetryable(error: Error): boolean {
  * @param options - Retry configuration options
  * @returns Result of the function
  */
-export async function withRetry<T>(
-  fn: () => Promise<T>,
-  options: RetryOptions = {}
-): Promise<T> {
+export async function withRetry<T>(fn: () => Promise<T>, options: RetryOptions = {}): Promise<T> {
   const {
     maxRetries = DEFAULT_MAX_RETRIES,
-    baseDelay = DEFAULT_RETRY_DELAY_BASE,
-    onRetry
+    onRetry,
   } = options;
 
   let lastError: Error;
@@ -98,7 +89,7 @@ export async function withRetry<T>(
         const delay = addJitter(calculateBackoff(attempt));
 
         // Wait for the delay
-        await new Promise(resolve => setTimeout(resolve, delay));
+        await new Promise((resolve) => setTimeout(resolve, delay));
       } else {
         // No more retries or error is not retryable
         throw lastError;
@@ -108,19 +99,4 @@ export async function withRetry<T>(
 
   // This should never be reached, but TypeScript needs a return
   throw lastError!;
-}
-
-/**
- * Create a retryable version of a function
- * @param fn - Function to make retryable
- * @param options - Retry options
- * @returns Retryable function
- */
-export function withRetry_<T>(
-  fn: () => Promise<T>,
-  options?: RetryOptions
-): () => Promise<T> {
-  return async () => {
-    return withRetry(fn, options);
-  };
 }
