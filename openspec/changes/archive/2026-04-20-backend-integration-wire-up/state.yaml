@@ -1,0 +1,8 @@
+change: backend-integration-wire-up
+status: archived
+archive_date: 2026-04-20
+verification: pass
+tasks_completed: 39
+tests_passing: 101+
+archived_to: openspec/changes/archive/2026-04-20-backend-integration-wire-up/
+spec_synced_to: openspec/specs/backend-application/spec.md
