@@ -1,0 +1,203 @@
+/**
+ * BackendCreationModal Styles
+ * Phase 4 - UI Components for Backend Creation Pipeline
+ */
+
+/* Modal-specific overrides */
+.backend-creation-modal {
+  max-width: 560px;
+}
+
+/* Header icon styles */
+.icon-spin {
+  animation: spin 1s linear infinite;
+  color: var(--accent-primary);
+}
+
+.icon-success {
+  color: #10b981;
+}
+
+.icon-error {
+  color: #ef4444;
+}
+
+/* Progress Section */
+.progress-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.progress-bar-container {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-primary), #22d3ee);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.progress-percentage {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--accent-primary);
+  min-width: 40px;
+  text-align: right;
+}
+
+/* Stages Container */
+.stages-container {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.stage-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 8px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  transition: all 0.3s ease;
+}
+
+.stage-item.completed {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.stage-item.active {
+  background: rgba(34, 211, 238, 0.12);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 12px rgba(34, 211, 238, 0.2);
+}
+
+.stage-item.pending {
+  opacity: 0.5;
+}
+
+.stage-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.stage-item.completed .stage-icon {
+  background: rgba(16, 185, 129, 0.2);
+}
+
+.stage-item.active .stage-icon {
+  background: rgba(34, 211, 238, 0.2);
+}
+
+.stage-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.stage-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.2;
+}
+
+.stage-item.completed .stage-label,
+.stage-item.active .stage-label {
+  color: var(--text-primary);
+}
+
+.stage-connector {
+  display: none;
+}
+
+/* Status Message */
+.status-message {
+  text-align: center;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.error-message {
+  color: #ef4444;
+  font-weight: 500;
+}
+
+.success-message {
+  color: #10b981;
+  font-weight: 500;
+}
+
+.loading-message {
+  color: var(--text-secondary);
+}
+
+/* Buttons */
+.btn-retry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: var(--radius-md);
+  background: var(--accent-primary);
+  color: var(--bg-primary);
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.btn-retry:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(34, 211, 238, 0.4);
+}
+
+.btn-retry svg {
+  animation: none;
+}
+
+.btn-retry:hover svg {
+  animation: spin 1s linear infinite;
+}
+
+/* Spin animation */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .stages-container {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .stage-item {
+    flex: 1 1 45%;
+  }
+}
