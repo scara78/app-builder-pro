@@ -88,21 +88,30 @@ describe('useSupabaseQuery', () => {
       client: mockClient,
     };
 
-    // Mock the select chain to return data
-    const mockSelect = vi.fn().mockResolvedValue({
-      data: [{ id: '1', name: 'John' }],
-      error: null,
+    // Mock the select chain to return data with a delayed promise
+    // This ensures we can catch the initial loading state before the promise resolves
+    let resolvePromise: (value: any) => void;
+    const pendingPromise = new Promise((resolve) => {
+      resolvePromise = resolve;
     });
+
+    const mockSelect = vi.fn().mockReturnValue(pendingPromise);
 
     (mockClient.from as any).mockReturnValue({ select: mockSelect });
 
     // When
     const { result } = renderHook(() => useSupabaseQuery(options));
 
-    // Then - should start loading
+    // Then - should start loading (promise hasn't resolved yet)
     expect(result.current.loading).toBe(true);
     expect(result.current.data).toBe(null);
     expect(result.current.error).toBe(null);
+
+    // Cleanup: resolve the promise to avoid hanging
+    resolvePromise!({ data: [], error: null });
+    await act(async () => {
+      await pendingPromise;
+    });
   });
 
   // ============ RED - Test: Query fetches data successfully ============

@@ -73,6 +73,9 @@ export function useSupabaseQuery<T = any>(
   const [error, setError] = useState<Error | null>(null);
   const { client } = useSupabase(options.client);
 
+  // Extract individual dependencies to avoid object recreation issues
+  const { table, select: selectFields, filters, orderBy, limit } = options;
+
   const fetch = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -84,23 +87,23 @@ export function useSupabaseQuery<T = any>(
     }
 
     try {
-      let query = client.from(options.table).select(options.select || '*');
+      let query = client.from(table).select(selectFields || '*');
 
       // Aplicar filtros si existen
-      if (options.filters) {
-        query = options.filters(query);
+      if (filters) {
+        query = filters(query);
       }
 
       // Aplicar ordenamiento
-      if (options.orderBy) {
-        query = query.order(options.orderBy.column, {
-          ascending: options.orderBy.ascending ?? true,
+      if (orderBy) {
+        query = query.order(orderBy.column, {
+          ascending: orderBy.ascending ?? true,
         });
       }
 
       // Aplicar límite
-      if (options.limit) {
-        query = query.limit(options.limit);
+      if (limit) {
+        query = query.limit(limit);
       }
 
       const { data: result, error: queryError } = await query;
@@ -115,7 +118,7 @@ export function useSupabaseQuery<T = any>(
     } finally {
       setLoading(false);
     }
-  }, [client, options]);
+  }, [client, table, selectFields, filters, orderBy, limit]);
 
   useEffect(() => {
     fetch();
