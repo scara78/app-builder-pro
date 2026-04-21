@@ -5,6 +5,7 @@
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { redactCredentials, logErrorSafe } from '../../utils/logger';
 import type {
   BackendRequirements,
   Entity,
@@ -141,8 +142,9 @@ export class AIFallbackAnalyzer {
    * Handle error - return fallback with zero confidence
    */
   handleError(error: Error): BackendRequirements {
-    console.error('[AIFallbackAnalyzer] Error:', error.message);
-    return this.createFallbackResult(`Error: ${error.message}`);
+    // SEC-04: Redact credentials from error logs
+    logErrorSafe('AIFallbackAnalyzer', error);
+    return this.createFallbackResult(`Error: ${redactCredentials(error.message)}`);
   }
 
   /**

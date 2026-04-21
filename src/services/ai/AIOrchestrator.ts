@@ -3,6 +3,7 @@ import { type ProjectFile, type AIResponse } from '../../types';
 import { SYSTEM_PROMPT } from './prompts';
 import { parseAIResponse } from './codeParser';
 import { quotaManager } from './AIQuotaManager';
+import { logErrorSafe } from '../../utils/logger';
 
 export class AIOrchestrator {
   private static instance: AIOrchestrator;
@@ -60,13 +61,13 @@ export class AIOrchestrator {
     console.log('Generating app via Gemini SDK. Prompt length:', prompt.length);
 
     const sanitizedPrompt = this.sanitizeInput(prompt);
-    
+
     try {
       const model = this.genAI.getGenerativeModel({ model: this.modelId });
-      
+
       const result = await model.generateContent([
         SYSTEM_PROMPT,
-        `User Prompt: ${sanitizedPrompt}`
+        `User Prompt: ${sanitizedPrompt}`,
       ]);
 
       const response = await result.response;
@@ -81,12 +82,8 @@ export class AIOrchestrator {
       };
     } catch (error) {
       quotaManager.recordError();
-      // SEC-02: Log generic message, not error objects (avoid stack traces)
-      if (error instanceof Error) {
-        console.error('Gemini API Error:', error.message);
-      } else {
-        console.error('Gemini API Error: Unknown error');
-      }
+      // SEC-02/SEC-04: Log redacted message — credentials stripped
+      logErrorSafe('Gemini API Error', error);
       throw error;
     }
   }
@@ -130,12 +127,8 @@ export class AIOrchestrator {
       };
     } catch (error) {
       quotaManager.recordError();
-      // SEC-02: Log generic message, not error objects (avoid stack traces)
-      if (error instanceof Error) {
-        console.error('Gemini Refine Error:', error.message);
-      } else {
-        console.error('Gemini Refine Error: Unknown error');
-      }
+      // SEC-02/SEC-04: Log redacted message — credentials stripped
+      logErrorSafe('Gemini Refine Error', error);
       throw error;
     }
   }
@@ -147,8 +140,8 @@ export class AIOrchestrator {
       const result = await model.generateContent("Say 'Connection Successful'");
       return [result.response.text()];
     } catch (error: any) {
-      // SEC-02: Log generic message, not error objects (avoid stack traces)
-      console.error('Test Connection Error:', error.message || 'Unknown error');
+      // SEC-02/SEC-04: Log redacted message — credentials stripped
+      logErrorSafe('Test Connection Error', error);
       throw error;
     }
   }

@@ -7,6 +7,7 @@ import type { MCPClientConfig, SupabaseProject, Region, MCPResponse } from './ty
 import { DEFAULT_MCP_ENDPOINT, DEFAULT_TIMEOUT, DEFAULT_MAX_RETRIES } from './constants';
 import { MCPAuthError, MCPValidationError, mapHttpError } from './errors';
 import { withRetry } from './retry';
+import { redactCredentials } from '../../utils/logger';
 
 /**
  * Supabase MCP Client for project management operations
@@ -72,7 +73,8 @@ export class SupabaseMCPClient {
       {
         maxRetries: this.maxRetries,
         onRetry: (attempt, error) => {
-          console.log(`Retry attempt ${attempt}:`, error.message);
+          // SEC-04: Redact credentials from retry logs
+          console.log(`Retry attempt ${attempt}:`, redactCredentials(error.message));
         },
       }
     );

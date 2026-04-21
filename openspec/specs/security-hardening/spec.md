@@ -43,3 +43,44 @@ The system SHALL sanitize user prompts before appending them to AI context to pr
 - GIVEN user prompt "Add a login button"
 - WHEN prompt is processed
 - THEN it is passed to AI without modification
+
+### Requirement: CSP Meta Tag MUST be Present in index.html
+The system SHALL include a properly configured Content-Security-Policy meta tag in `index.html` that restricts resource loading to trusted sources and prevents XSS attacks.
+
+#### Scenario: CSP meta tag present in index.html
+- GIVEN `index.html` in project root
+- WHEN page is loaded in browser
+- THEN CSP meta tag is present in `<head>` with `http-equiv="Content-Security-Policy"`
+
+#### Scenario: CSP includes required directives
+- GIVEN CSP meta tag in index.html
+- WHEN CSP policy is parsed
+- THEN it includes `default-src 'self'`, `script-src 'self'`, `style-src 'self' 'unsafe-inline'`, and `connect-src` with Supabase and Gemini API endpoints
+
+#### Scenario: CSP blocks unauthorized script sources
+- GIVEN CSP with `script-src 'self'`
+- WHEN external script from unauthorized domain attempts to load
+- THEN script is blocked by CSP
+
+#### Scenario: CSP allows legitimate API connections
+- GIVEN CSP with proper `connect-src` directive
+- WHEN application makes requests to Supabase and Gemini APIs
+- THEN requests are allowed by CSP
+
+#### Scenario: CSP prevents inline event handlers
+- GIVEN CSP with `script-src 'self'` (no 'unsafe-inline' for scripts)
+- WHEN HTML with `onclick="malicious()"` is rendered
+- THEN inline event handler is blocked by CSP
+
+### Requirement: Production Build MUST Disable Sourcemaps
+The system SHALL disable JavaScript sourcemaps in production builds to prevent exposure of source code structure and comments that may contain sensitive information.
+
+#### Scenario: Sourcemaps disabled in production
+- GIVEN `vite.config.ts` build configuration
+- WHEN production build is created (`npm run build`)
+- THEN no `.map` files are generated in the `dist/` directory
+
+#### Scenario: Sourcemaps available in development
+- GIVEN development environment
+- WHEN running `npm run dev`
+- THEN sourcemaps are enabled for debugging purposes

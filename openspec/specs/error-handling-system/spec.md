@@ -53,3 +53,31 @@ The system SHALL return a warnings array from parseAIResponse containing details
 - GIVEN AI response with proper File markers and closed code blocks
 - WHEN parseAIResponse is called
 - THEN it returns files array and empty warnings array
+
+### Requirement: Error Messages MUST NOT Contain Tokens or Keys
+The system SHALL ensure that error messages, logs, and user-facing error UI do not expose authentication tokens, API keys, or other sensitive credentials.
+
+#### Scenario: API errors hide credentials
+- GIVEN API request fails with error containing credential
+- WHEN error is logged or displayed
+- THEN any API key, token, or secret is redacted or masked (e.g., "API key: ****")
+
+#### Scenario: Network errors sanitize URLs with tokens
+- GIVEN network error containing URL with query parameter token
+- WHEN error is caught and displayed
+- THEN URL is sanitized to remove or mask the token parameter
+
+#### Scenario: Error boundary shows safe message
+- GIVEN error boundary catches error with sensitive data
+- WHEN fallback UI is rendered
+- THEN only generic "Something went wrong" message is shown, not the full error details
+
+#### Scenario: Console logs sanitize credentials
+- GIVEN code that logs errors for debugging
+- WHEN error containing credentials is logged
+- THEN credentials are replaced with placeholder text like "[REDACTED]"
+
+#### Scenario: Stack traces sanitized in production
+- GIVEN production environment
+- WHEN error with stack trace occurs
+- THEN stack trace does not include file paths that reveal API keys or tokens in URL parameters

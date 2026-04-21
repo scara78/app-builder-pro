@@ -160,7 +160,7 @@ export function useBackendCreation() {
         return;
       }
 
-      const token = getToken();
+      const token = await getToken();
       if (!token) {
         setStage(PipelineStage.ERROR);
         setError('Authentication required. Please log in with Supabase OAuth.');

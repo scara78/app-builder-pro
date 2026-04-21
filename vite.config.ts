@@ -1,6 +1,6 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -8,7 +8,7 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5173,
-    strictPort: false
+    strictPort: false,
     // Cabeceras COOP/COEP comentadas temporalmente para evitar bucles de recarga en desarrollo
     // headers: {
     //   'Cross-Origin-Opener-Policy': 'same-origin',
@@ -18,10 +18,10 @@ export default defineConfig({
   preview: {
     host: '0.0.0.0',
     port: 4173,
-    strictPort: false
+    strictPort: false,
   },
   build: {
     outDir: 'dist',
-    sourcemap: true
-  }
-})
+    sourcemap: process.env.NODE_ENV === 'development',
+  },
+});

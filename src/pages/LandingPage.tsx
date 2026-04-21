@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, Terminal, Code2, Rocket, Settings } from 'lucide-react';
 import SettingsModal from '../components/settings/SettingsModal';
+import PrivacyPolicyModal from '../components/privacy/PrivacyPolicyModal';
 import { sanitizeInput } from '../utils/sanitize';
 import './LandingPage.css';
 
@@ -12,6 +13,7 @@ interface LandingPageProps {
 const LandingPage: React.FC<LandingPageProps> = ({ onStartBuild }) => {
   const [prompt, setPrompt] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
 
   const examples = [
     'A modern SaaS dashboard with dark mode',
@@ -127,9 +129,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStartBuild }) => {
 
       <footer className="landing-footer">
         <p>© 2026 App Builder Pro AI Labs. Built with &lt;3 for builders.</p>
+        <button type="button" className="privacy-link" onClick={() => setIsPrivacyOpen(true)}>
+          Privacy Policy
+        </button>
       </footer>
 
       {isSettingsOpen && <SettingsModal onClose={() => setIsSettingsOpen(false)} />}
+      <PrivacyPolicyModal isOpen={isPrivacyOpen} onClose={() => setIsPrivacyOpen(false)} />
     </div>
   );
 };

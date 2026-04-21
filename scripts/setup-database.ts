@@ -1,12 +1,37 @@
 /**
  * Script para crear tablas iniciales en Supabase
  * Ejecutar con: npx ts-node scripts/setup-database.ts
+ *
+ * REQUISITOS:
+ * - VITE_SUPABASE_URL debe estar configurado en .env
+ * - VITE_SUPABASE_ANON_KEY debe estar configurado en .env
+ *
+ * Para configurar, copiá .env.example a .env y completá los valores.
  */
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL || '[REDACTED-supabase-url]';
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || '[REDACTED-jwt]';
+// Leer credenciales de environment — sin fallbacks hardcodeados
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
+
+// Validación: asegurar que las credenciales existan
+if (!supabaseUrl || !supabaseKey) {
+  console.error('❌ Error: Faltan credenciales de Supabase');
+  console.error('');
+  console.error('Las siguientes variables de entorno son requeridas:');
+  console.error('  - VITE_SUPABASE_URL');
+  console.error('  VITE_SUPABASE_ANON_KEY');
+  console.error('');
+  console.error('Para configurar:');
+  console.error('  1. cp .env.example .env');
+  console.error('  2. Editá .env y completá los valores de tu proyecto Supabase');
+  console.error(
+    '  3. Obtené los valores de: https://supabase.com/dashboard/{project}/settings/api'
+  );
+  console.error('');
+  process.exit(1);
+}
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -47,14 +72,14 @@ CREATE POLICY "Enable all access" ON components FOR ALL USING (true) WITH CHECK 
 
 async function setupDatabase() {
   console.log('🔧 Configurando base de datos...\n');
-  console.log('URL:', supabaseUrl);
+  console.log('URL:', supabaseUrl.replace(/\/\/.*/, '//[redacted]')); // No mostrar URL completa
   console.log('');
 
   try {
     // Ejecutar SQL usando la función rpc o directamente
     // Como no tenemos una función RPC personalizada, usamos el método de query
     const { error } = await supabase.rpc('exec_sql', { sql: SQL });
-    
+
     if (error) {
       console.log('⚠️  Nota: Usando método alternativo (SQL Editor manual)');
       console.log('\n📋 Por favor, copiá este SQL y ejecutalo en el SQL Editor de Supabase:\n');

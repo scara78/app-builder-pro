@@ -1,0 +1,146 @@
+/**
+ * Cookie Consent Banner Styles
+ * Phase 4 - Privacy Controls
+ *
+ * Fixed bottom positioning with responsive design.
+ */
+
+.cookie-consent-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--bg-secondary, #1e293b);
+  border-top: 1px solid var(--border, #334155);
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  z-index: 9998;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.2);
+  animation: slide-up 0.3s ease-out;
+}
+
+.cookie-consent-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-primary, #22d3ee);
+}
+
+.cookie-consent-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.cookie-consent-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary, #f1f5f9);
+  margin: 0 0 0.25rem 0;
+}
+
+.cookie-consent-text {
+  font-size: 0.875rem;
+  color: var(--text-secondary, #94a3b8);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.cookie-consent-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent-primary, #22d3ee);
+  font-size: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.cookie-consent-link:hover {
+  color: var(--text-primary, #f1f5f9);
+}
+
+.cookie-consent-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.cookie-btn {
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-md, 0.375rem);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+}
+
+.cookie-btn-secondary {
+  background: transparent;
+  border-color: var(--border, #334155);
+  color: var(--text-secondary, #94a3b8);
+}
+
+.cookie-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary, #f1f5f9);
+}
+
+.cookie-btn-primary {
+  background: var(--accent-primary, #22d3ee);
+  color: var(--bg-primary, #0f172a);
+}
+
+.cookie-btn-primary:hover {
+  background: var(--accent-secondary, #06b6d4);
+}
+
+/* Animation */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 640px) {
+  .cookie-consent-banner {
+    flex-direction: column;
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .cookie-consent-icon {
+    display: none;
+  }
+
+  .cookie-consent-content {
+    text-align: center;
+  }
+
+  .cookie-consent-title {
+    font-size: 1.125rem;
+  }
+
+  .cookie-consent-text {
+    font-size: 0.875rem;
+  }
+
+  .cookie-consent-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .cookie-btn {
+    width: 100%;
+    padding: 0.75rem 1rem;
+  }
+}
