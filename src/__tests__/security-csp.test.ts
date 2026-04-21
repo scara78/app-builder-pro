@@ -25,10 +25,14 @@ describe('SEC-02: Content Security Policy (CSP)', () => {
   function parseCspMetaTag(htmlContent: string): Map<string, string[]> {
     const cspMap = new Map<string, string[]>();
 
-    // Find content= value after CSP Report-Only meta tag
-    // The HTML has: content="default-src 'self'; script-src 'self'; ..."
-    const contentStart = htmlContent.indexOf('Content-Security-Policy-Report-Only');
-    if (contentStart === -1) return cspMap;
+  // Find content= value after CSP meta tag
+  // The HTML has: content="default-src 'self'; script-src 'self'; ..."
+  // Support both enforcing and Report-Only modes
+  const contentStart =
+    htmlContent.indexOf('Content-Security-Policy-Report-Only') !== -1
+      ? htmlContent.indexOf('Content-Security-Policy-Report-Only')
+      : htmlContent.indexOf('Content-Security-Policy');
+  if (contentStart === -1) return cspMap;
 
     // Find the content=" after the meta tag
     const contentQuoteStart = htmlContent.indexOf('content="', contentStart);
@@ -93,15 +97,17 @@ describe('SEC-02: Content Security Policy (CSP)', () => {
     expect(hasCspMetaTag).toBe(true);
   });
 
-  // ============ Test: CSP uses Report-Only mode ============
+  // ============ Test: CSP uses enforcing mode ============
 
-  it('CSP should use Report-Only mode for monitoring period', () => {
+  it('CSP should use enforcing mode (not Report-Only)', () => {
     const htmlContent = fs.readFileSync(indexHtmlPath, 'utf-8');
 
-    // Report-Only allows monitoring without blocking
+    // CSP should be enforcing, not Report-Only
     const isReportOnly = /Content-Security-Policy-Report-Only/i.test(htmlContent);
+    const isEnforcing = /http-equiv=["']Content-Security-Policy["']/i.test(htmlContent);
 
-    expect(isReportOnly).toBe(true);
+    expect(isReportOnly).toBe(false);
+    expect(isEnforcing).toBe(true);
   });
 
   // ============ Test: CSP has required directives ============

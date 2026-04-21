@@ -6,7 +6,65 @@ on:
       - main
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run all tests
+        run: npm run test:run
+
+      - name: Run security tests
+        run: npx vitest run src/__tests__/security-credentials.test.ts src/__tests__/security-csp.test.ts src/__tests__/security-token-storage.test.tsx src/__tests__/security-error-handling.test.ts src/__tests__/security-sessionStorage.test.tsx src/__tests__/security-prompt-logging.test.ts
+
+      - name: Generate security test coverage
+        run: npm run test:run -- --coverage src/__tests__/security-credentials.test.ts src/__tests__/security-csp.test.ts src/__tests__/security-token-storage.test.tsx src/__tests__/security-error-handling.test.ts src/__tests__/security-sessionStorage.test.tsx src/__tests__/security-prompt-logging.test.ts
+
+      - name: Report security test coverage summary
+        if: always()
+        run: |
+          echo "## Security Test Coverage Summary" >> $GITHUB_STEP_SUMMARY
+          if [ -d "coverage" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| File | Stmts | Branch | Funcs | Lines |" >> $GITHUB_STEP_SUMMARY
+            echo "|------|-------|--------|-------|-------|" >> $GITHUB_STEP_SUMMARY
+            if [ -f "coverage/coverage-summary.json" ]; then
+              node -e "
+                const summary = require('./coverage/coverage-summary.json');
+                const files = Object.entries(summary)
+                  .filter(([k]) => k !== 'total')
+                  .sort(([a],[b]) => a.localeCompare(b));
+                for (const [file, data] of files) {
+                  const s = data.statements;
+                  const b = data.branches;
+                  const f = data.functions;
+                  const l = data.lines;
+                  console.log('| ' + file.replace(/\\\\/g, '/') + ' | ' +
+                    s.pct + '% | ' + b.pct + '% | ' + f.pct + '% | ' + l.pct + '% |');
+                }
+                const t = summary.total;
+                console.log('| **Total** | **' + t.statements.pct + '%** | **' + t.branches.pct + '%** | **' + t.functions.pct + '%** | **' + t.lines.pct + '%** |');
+              " >> $GITHUB_STEP_SUMMARY
+            else
+              echo "Coverage summary JSON not found — showing text report" >> $GITHUB_STEP_SUMMARY
+              cat coverage/coverage.txt 2>/dev/null >> $GITHUB_STEP_SUMMARY || true
+            fi
+          else
+            echo "No coverage data generated" >> $GITHUB_STEP_SUMMARY
+          fi
+
   deploy:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
