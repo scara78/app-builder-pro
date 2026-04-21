@@ -78,7 +78,7 @@ describe('useBackendCreation', () => {
   describe('Initial State', () => {
     it('initializes with correct default state', () => {
       const { result } = renderHook(() => useBackendCreation());
-      
+
       expect(result.current.stage).toBe('idle');
       expect(result.current.progress).toBe(0);
       expect(result.current.isCreating).toBe(false);
@@ -86,60 +86,60 @@ describe('useBackendCreation', () => {
       expect(result.current.result).toBe(null);
     });
 
-it('returns all required methods', () => {
-    mockOAuth.mockReturnValue({
-      getToken: vi.fn().mockReturnValue('valid-token'),
-      isAuthenticated: true,
-      status: 'authenticated',
-      error: null,
-      login: vi.fn(),
-      logout: vi.fn(),
+    it('returns all required methods', () => {
+      mockOAuth.mockReturnValue({
+        getToken: vi.fn().mockReturnValue('valid-token'),
+        isAuthenticated: true,
+        status: 'authenticated',
+        error: null,
+        login: vi.fn(),
+        logout: vi.fn(),
+      });
+
+      const { result } = renderHook(() => useBackendCreation());
+
+      // Then - verify all expected properties exist
+      expect(result.current).toHaveProperty('createBackend');
+      expect(result.current).toHaveProperty('retry');
+      expect(result.current).toHaveProperty('reset');
+      expect(result.current).toHaveProperty('stage');
+      expect(result.current).toHaveProperty('progress');
+      expect(result.current).toHaveProperty('isCreating');
+      expect(result.current).toHaveProperty('error');
+      expect(result.current).toHaveProperty('result');
+      expect(typeof result.current.createBackend).toBe('function');
+      expect(typeof result.current.retry).toBe('function');
+      expect(typeof result.current.reset).toBe('function');
     });
-    
-    const { result } = renderHook(() => useBackendCreation());
-    
-    // Then - verify all expected properties exist
-    expect(result.current).toHaveProperty('createBackend');
-    expect(result.current).toHaveProperty('retry');
-    expect(result.current).toHaveProperty('reset');
-    expect(result.current).toHaveProperty('stage');
-    expect(result.current).toHaveProperty('progress');
-    expect(result.current).toHaveProperty('isCreating');
-    expect(result.current).toHaveProperty('error');
-    expect(result.current).toHaveProperty('result');
-    expect(typeof result.current.createBackend).toBe('function');
-    expect(typeof result.current.retry).toBe('function');
-    expect(typeof result.current.reset).toBe('function');
-  });
   });
 
   // ============ T3.1 & T3.3: Happy Path Pipeline Test ============
 
   describe('Happy Path - All Stages Succeed', () => {
     it('completes full pipeline: analyze → generate → createProject → applyMigration', async () => {
-// Given - mock responses for each stage
-    const mockRequirements: BackendRequirements = {
-      entities: [
-        {
-          name: 'User',
-          typeName: 'User',
-          fields: [
-            { name: 'id', type: 'string', isOptional: false },
-            { name: 'email', type: 'string', isOptional: false }
-          ],
-          confidence: 90,
-          matchType: 'pattern'
-        }
-      ],
-      authRequirements: [],
-      storageRequirements: [],
-      crudOperations: [],
-      hasAuth: false,
-      hasStorage: false,
-      overallConfidence: 85,
-      analysisMethod: 'pattern',
-      analyzedAt: new Date().toISOString(),
-    };
+      // Given - mock responses for each stage
+      const mockRequirements: BackendRequirements = {
+        entities: [
+          {
+            name: 'User',
+            typeName: 'User',
+            fields: [
+              { name: 'id', type: 'string', isOptional: false },
+              { name: 'email', type: 'string', isOptional: false },
+            ],
+            confidence: 90,
+            matchType: 'pattern',
+          },
+        ],
+        authRequirements: [],
+        storageRequirements: [],
+        crudOperations: [],
+        hasAuth: false,
+        hasStorage: false,
+        overallConfidence: 85,
+        analysisMethod: 'pattern',
+        analyzedAt: new Date().toISOString(),
+      };
 
       const mockMigrationResult: MigrationResult = {
         sql: 'CREATE TABLE "User" (...);',
@@ -147,14 +147,14 @@ it('returns all required methods', () => {
         warnings: [],
       };
 
-const mockProject: SupabaseProject = {
-      ref: 'abc123def456',
-      name: 'test-project',
-      apiUrl: 'https://abc123def456.supabase.co',
-      anonKey: 'mock-anon-key',
-      status: 'ACTIVE',
-      createdAt: new Date().toISOString(),
-    };
+      const mockProject: SupabaseProject = {
+        ref: 'abc123def456',
+        name: 'test-project',
+        apiUrl: 'https://abc123def456.supabase.co',
+        anonKey: 'mock-anon-key',
+        status: 'ACTIVE',
+        createdAt: new Date().toISOString(),
+      };
 
       // Setup mock implementations
       const analyzerInstance = {
@@ -216,23 +216,52 @@ const mockProject: SupabaseProject = {
       });
     });
 
-it('completes pipeline with progress updates', async () => {
+    it('completes pipeline with progress updates', async () => {
       // Setup with delays to track progress
       const analyzerInstance = {
-        analyze: vi.fn().mockImplementation(() => new Promise(resolve =>
-          setTimeout(() => resolve({ entities: [], authRequirements: [], storageRequirements: [], crudOperations: [], hasAuth: false, hasStorage: false, overallConfidence: 80, analysisMethod: 'pattern', analyzedAt: new Date().toISOString() }), 10)
-        )),
+        analyze: vi
+          .fn()
+          .mockImplementation(
+            () =>
+              new Promise((resolve) =>
+                setTimeout(
+                  () =>
+                    resolve({
+                      entities: [],
+                      authRequirements: [],
+                      storageRequirements: [],
+                      crudOperations: [],
+                      hasAuth: false,
+                      hasStorage: false,
+                      overallConfidence: 80,
+                      analysisMethod: 'pattern',
+                      analyzedAt: new Date().toISOString(),
+                    }),
+                  10
+                )
+              )
+          ),
       };
       const generatorInstance = {
         generate: vi.fn().mockReturnValue({ sql: '', tables: [], warnings: [] }),
       };
       const mcpClientInstance = {
-        createProject: vi.fn().mockImplementation(() => new Promise(resolve =>
-          setTimeout(() => resolve({ id: '1', ref: 'ref', name: 'p', region: 'us', createdAt: '' }), 10)
-        )),
-        applyMigration: vi.fn().mockImplementation(() => new Promise<void>(resolve =>
-          setTimeout(() => resolve(), 10)
-        )),
+        createProject: vi
+          .fn()
+          .mockImplementation(
+            () =>
+              new Promise((resolve) =>
+                setTimeout(
+                  () => resolve({ id: '1', ref: 'ref', name: 'p', region: 'us', createdAt: '' }),
+                  10
+                )
+              )
+          ),
+        applyMigration: vi
+          .fn()
+          .mockImplementation(
+            () => new Promise<void>((resolve) => setTimeout(() => resolve(), 10))
+          ),
         getProjectUrl: vi.fn().mockResolvedValue('https://ref.supabase.co'),
         getAnonKey: vi.fn().mockResolvedValue('key'),
       };
@@ -293,19 +322,21 @@ it('completes pipeline with progress updates', async () => {
 
     it('handles error at Stage 2 (generate)', async () => {
       const analyzerInstance = {
-        analyze: vi.fn().mockResolvedValue({ 
-          entities: [], 
-          authRequirements: [], 
-          storageRequirements: [], 
-          crudOperations: [], 
-          hasAuth: false, 
-          hasStorage: false, 
-          overallConfidence: 80, 
-          analysisMethod: 'pattern' 
+        analyze: vi.fn().mockResolvedValue({
+          entities: [],
+          authRequirements: [],
+          storageRequirements: [],
+          crudOperations: [],
+          hasAuth: false,
+          hasStorage: false,
+          overallConfidence: 80,
+          analysisMethod: 'pattern',
         }),
       };
       const generatorInstance = {
-        generate: vi.fn().mockImplementation(() => { throw new Error('Generation failed'); }),
+        generate: vi.fn().mockImplementation(() => {
+          throw new Error('Generation failed');
+        }),
       };
 
       mockAnalyzer.mockImplementation(() => analyzerInstance);
@@ -332,15 +363,15 @@ it('completes pipeline with progress updates', async () => {
 
     it('handles error at Stage 3 (createProject)', async () => {
       const analyzerInstance = {
-        analyze: vi.fn().mockResolvedValue({ 
-          entities: [], 
-          authRequirements: [], 
-          storageRequirements: [], 
-          crudOperations: [], 
-          hasAuth: false, 
-          hasStorage: false, 
-          overallConfidence: 80, 
-          analysisMethod: 'pattern' 
+        analyze: vi.fn().mockResolvedValue({
+          entities: [],
+          authRequirements: [],
+          storageRequirements: [],
+          crudOperations: [],
+          hasAuth: false,
+          hasStorage: false,
+          overallConfidence: 80,
+          analysisMethod: 'pattern',
         }),
       };
       const generatorInstance = {
@@ -376,27 +407,27 @@ it('completes pipeline with progress updates', async () => {
 
     it('handles error at Stage 4 (applyMigration)', async () => {
       const analyzerInstance = {
-        analyze: vi.fn().mockResolvedValue({ 
-          entities: [], 
-          authRequirements: [], 
-          storageRequirements: [], 
-          crudOperations: [], 
-          hasAuth: false, 
-          hasStorage: false, 
-          overallConfidence: 80, 
-          analysisMethod: 'pattern' 
+        analyze: vi.fn().mockResolvedValue({
+          entities: [],
+          authRequirements: [],
+          storageRequirements: [],
+          crudOperations: [],
+          hasAuth: false,
+          hasStorage: false,
+          overallConfidence: 80,
+          analysisMethod: 'pattern',
         }),
       };
       const generatorInstance = {
         generate: vi.fn().mockReturnValue({ sql: 'SELECT 1', tables: [], warnings: [] }),
       };
       const mcpClientInstance = {
-        createProject: vi.fn().mockResolvedValue({ 
-          id: '1', 
-          ref: 'ref', 
-          name: 'p', 
-          region: 'us', 
-          createdAt: '' 
+        createProject: vi.fn().mockResolvedValue({
+          id: '1',
+          ref: 'ref',
+          name: 'p',
+          region: 'us',
+          createdAt: '',
         }),
         applyMigration: vi.fn().mockRejectedValue(new Error('Migration failed')),
       };
@@ -451,29 +482,30 @@ it('completes pipeline with progress updates', async () => {
     it('retry restarts pipeline from beginning', async () => {
       // First call fails
       const analyzerInstance = {
-        analyze: vi.fn()
+        analyze: vi
+          .fn()
           .mockRejectedValueOnce(new Error('First attempt failed'))
-          .mockResolvedValue({ 
-            entities: [], 
-            authRequirements: [], 
-            storageRequirements: [], 
-            crudOperations: [], 
-            hasAuth: false, 
-            hasStorage: false, 
-            overallConfidence: 80, 
-            analysisMethod: 'pattern' 
+          .mockResolvedValue({
+            entities: [],
+            authRequirements: [],
+            storageRequirements: [],
+            crudOperations: [],
+            hasAuth: false,
+            hasStorage: false,
+            overallConfidence: 80,
+            analysisMethod: 'pattern',
           }),
       };
       const generatorInstance = {
         generate: vi.fn().mockReturnValue({ sql: '', tables: [], warnings: [] }),
       };
       const mcpClientInstance = {
-        createProject: vi.fn().mockResolvedValue({ 
-          id: '1', 
-          ref: 'ref', 
-          name: 'p', 
-          region: 'us', 
-          createdAt: '' 
+        createProject: vi.fn().mockResolvedValue({
+          id: '1',
+          ref: 'ref',
+          name: 'p',
+          region: 'us',
+          createdAt: '',
         }),
         applyMigration: vi.fn().mockResolvedValue(undefined),
       };
@@ -512,24 +544,24 @@ it('completes pipeline with progress updates', async () => {
       });
     });
 
-it('retry is disabled when not in error state', () => {
-    mockOAuth.mockReturnValue({
-      getToken: vi.fn().mockReturnValue('valid-token'),
-      isAuthenticated: true,
-      status: 'authenticated',
-      error: null,
-      login: vi.fn(),
-      logout: vi.fn(),
+    it('retry is disabled when not in error state', () => {
+      mockOAuth.mockReturnValue({
+        getToken: vi.fn().mockReturnValue('valid-token'),
+        isAuthenticated: true,
+        status: 'authenticated',
+        error: null,
+        login: vi.fn(),
+        logout: vi.fn(),
+      });
+
+      const { result } = renderHook(() => useBackendCreation());
+
+      // Initially in idle state
+      expect(result.current.retry()).toBe(false);
     });
-    
-    const { result } = renderHook(() => useBackendCreation());
-    
-    // Initially in idle state
-    expect(result.current.retry()).toBe(false);
-  });
   });
 
-// ============ T3.4: Reset Functionality Tests ============
+  // ============ T3.4: Reset Functionality Tests ============
 
   describe('Reset Functionality', () => {
     it('reset clears all state', async () => {
@@ -557,7 +589,7 @@ it('retry is disabled when not in error state', () => {
           ref: 'ref',
           name: 'p',
           region: 'us',
-          createdAt: ''
+          createdAt: '',
         }),
         applyMigration: vi.fn().mockResolvedValue(undefined),
       };
@@ -605,7 +637,9 @@ it('retry is disabled when not in error state', () => {
   describe('Edge Cases', () => {
     it('generates default project name if not provided', async () => {
       const mockRequirements: BackendRequirements = {
-        entities: [{ name: 'User', typeName: 'User', fields: [], confidence: 90, matchType: 'pattern' }],
+        entities: [
+          { name: 'User', typeName: 'User', fields: [], confidence: 90, matchType: 'pattern' },
+        ],
         authRequirements: [],
         storageRequirements: [],
         crudOperations: [],
@@ -623,12 +657,12 @@ it('retry is disabled when not in error state', () => {
         generate: vi.fn().mockReturnValue({ sql: '', tables: [], warnings: [] }),
       };
       const mcpClientInstance = {
-        createProject: vi.fn().mockResolvedValue({ 
-          id: '1', 
-          ref: 'ref', 
-          name: 'p', 
-          region: 'us', 
-          createdAt: '' 
+        createProject: vi.fn().mockResolvedValue({
+          id: '1',
+          ref: 'ref',
+          name: 'p',
+          region: 'us',
+          createdAt: '',
         }),
         applyMigration: vi.fn(),
       };
@@ -659,8 +693,8 @@ it('retry is disabled when not in error state', () => {
 
     it('sets isCreating to true during pipeline execution', async () => {
       let resolveAnalyze: (value: BackendRequirements) => void;
-      
-      const analyzePromise = new Promise<BackendRequirements>(resolve => {
+
+      const analyzePromise = new Promise<BackendRequirements>((resolve) => {
         resolveAnalyze = resolve;
       });
 
@@ -671,12 +705,12 @@ it('retry is disabled when not in error state', () => {
         generate: vi.fn().mockReturnValue({ sql: '', tables: [], warnings: [] }),
       };
       const mcpClientInstance = {
-        createProject: vi.fn().mockResolvedValue({ 
-          id: '1', 
-          ref: 'ref', 
-          name: 'p', 
-          region: 'us', 
-          createdAt: '' 
+        createProject: vi.fn().mockResolvedValue({
+          id: '1',
+          ref: 'ref',
+          name: 'p',
+          region: 'us',
+          createdAt: '',
         }),
         applyMigration: vi.fn(),
       };
@@ -700,11 +734,14 @@ it('retry is disabled when not in error state', () => {
         result.current.createBackend('code', {});
       });
 
-      // Should be creating
-      expect(result.current.isCreating).toBe(true);
-      expect(result.current.stage).toBe('analyzing');
+      // Should be creating — use waitFor to avoid race condition
+      // with React's batched state updates
+      await waitFor(() => {
+        expect(result.current.isCreating).toBe(true);
+        expect(result.current.stage).toBe('analyzing');
+      });
 
-// Complete the analyze
+      // Complete the analyze
       await act(async () => {
         resolveAnalyze!({
           entities: [],
@@ -715,274 +752,274 @@ it('retry is disabled when not in error state', () => {
           hasStorage: false,
           overallConfidence: 80,
           analysisMethod: 'pattern',
-          analyzedAt: new Date().toISOString()
+          analyzedAt: new Date().toISOString(),
         });
       });
 
       await waitFor(() => {
         expect(result.current.isCreating).toBe(false);
-  });
-});
-});
-
-// ============ Phase 1 (RA-001): Requirements Exposure Tests ============
-
-describe('Requirements Exposure (RA-001)', () => {
-  /**
-   * T-006: Unit tests for requirements exposure
-   * These tests verify that the hook exposes the BackendRequirements
-   * after the ANALYZING stage completes.
-   */
-
-  it('returns requirements as undefined before createBackend() is called', () => {
-    mockOAuth.mockReturnValue({
-      getToken: vi.fn().mockReturnValue('valid-token'),
-      isAuthenticated: true,
-      status: 'authenticated',
-      error: null,
-      login: vi.fn(),
-      logout: vi.fn(),
+      });
     });
-
-    const { result } = renderHook(() => useBackendCreation());
-
-    // Initially, requirements should be null (consistent with other state like result)
-    expect(result.current.requirements).toBeNull();
   });
 
-  it('returns requirements after createBackend() completes the ANALYZING stage', async () => {
-    const mockRequirements: BackendRequirements = {
-      entities: [
-        {
-          name: 'User',
-          typeName: 'User',
-          fields: [
-            { name: 'id', type: 'string', isOptional: false },
-            { name: 'email', type: 'string', isOptional: false },
-          ],
-          confidence: 90,
-          matchType: 'pattern',
-        },
-      ],
-      authRequirements: [],
-      storageRequirements: [],
-      crudOperations: [],
-      hasAuth: false,
-      hasStorage: false,
-      overallConfidence: 85,
-      analysisMethod: 'pattern',
-      analyzedAt: new Date().toISOString(),
-    };
+  // ============ Phase 1 (RA-001): Requirements Exposure Tests ============
 
-    const mockMigrationResult: MigrationResult = {
-      sql: 'CREATE TABLE "User" (...);',
-      tables: ['User'],
-      warnings: [],
-    };
+  describe('Requirements Exposure (RA-001)', () => {
+    /**
+     * T-006: Unit tests for requirements exposure
+     * These tests verify that the hook exposes the BackendRequirements
+     * after the ANALYZING stage completes.
+     */
 
-    const mockProject: SupabaseProject = {
-      ref: 'abc123def456',
-      name: 'test-project',
-      apiUrl: 'https://abc123def456.supabase.co',
-      anonKey: 'mock-anon-key',
-      status: 'ACTIVE',
-      createdAt: new Date().toISOString(),
-    };
+    it('returns requirements as undefined before createBackend() is called', () => {
+      mockOAuth.mockReturnValue({
+        getToken: vi.fn().mockReturnValue('valid-token'),
+        isAuthenticated: true,
+        status: 'authenticated',
+        error: null,
+        login: vi.fn(),
+        logout: vi.fn(),
+      });
 
-    const analyzerInstance = {
-      analyze: vi.fn().mockResolvedValue(mockRequirements),
-    };
-    const generatorInstance = {
-      generate: vi.fn().mockReturnValue(mockMigrationResult),
-    };
-    const mcpClientInstance = {
-      createProject: vi.fn().mockResolvedValue(mockProject),
-      applyMigration: vi.fn().mockResolvedValue(undefined),
-      getProjectUrl: vi.fn().mockResolvedValue('https://abc123def456.supabase.co'),
-      getAnonKey: vi.fn().mockResolvedValue('mock-anon-key'),
-    };
+      const { result } = renderHook(() => useBackendCreation());
 
-    mockAnalyzer.mockImplementation(() => analyzerInstance);
-    mockGenerator.mockImplementation(() => generatorInstance);
-    mockMCPClient.mockImplementation(() => mcpClientInstance);
-
-    mockOAuth.mockReturnValue({
-      getToken: vi.fn().mockReturnValue('valid-token'),
-      isAuthenticated: true,
-      status: 'authenticated',
-      error: null,
-      login: vi.fn(),
-      logout: vi.fn(),
+      // Initially, requirements should be null (consistent with other state like result)
+      expect(result.current.requirements).toBeNull();
     });
 
-    const { result } = renderHook(() => useBackendCreation());
+    it('returns requirements after createBackend() completes the ANALYZING stage', async () => {
+      const mockRequirements: BackendRequirements = {
+        entities: [
+          {
+            name: 'User',
+            typeName: 'User',
+            fields: [
+              { name: 'id', type: 'string', isOptional: false },
+              { name: 'email', type: 'string', isOptional: false },
+            ],
+            confidence: 90,
+            matchType: 'pattern',
+          },
+        ],
+        authRequirements: [],
+        storageRequirements: [],
+        crudOperations: [],
+        hasAuth: false,
+        hasStorage: false,
+        overallConfidence: 85,
+        analysisMethod: 'pattern',
+        analyzedAt: new Date().toISOString(),
+      };
 
-    const code = 'interface User { id: string; email: string; }';
+      const mockMigrationResult: MigrationResult = {
+        sql: 'CREATE TABLE "User" (...);',
+        tables: ['User'],
+        warnings: [],
+      };
 
-    await act(async () => {
-      await result.current.createBackend(code, { projectName: 'test-project' });
-    });
-
-    // After createBackend completes, requirements should be populated
-    expect(result.current.requirements).toBeDefined();
-    expect(result.current.requirements).toEqual(mockRequirements);
-  });
-
-  it('requirements contains expected data structure with entities', async () => {
-    const mockRequirements: BackendRequirements = {
-      entities: [
-        {
-          name: 'Product',
-          typeName: 'Product',
-          fields: [
-            { name: 'id', type: 'string', isOptional: false },
-            { name: 'name', type: 'string', isOptional: false },
-            { name: 'price', type: 'number', isOptional: true },
-          ],
-          confidence: 95,
-          matchType: 'pattern',
-        },
-      ],
-      authRequirements: [
-        {
-          type: 'login',
-          triggerPattern: 'useAuth',
-          userFields: ['email', 'password'],
-          confidence: 80,
-        },
-      ],
-      storageRequirements: [],
-      crudOperations: [
-        {
-          entity: 'Product',
-          operation: 'create',
-          triggerPattern: 'createProduct',
-          confidence: 85,
-        },
-      ],
-      hasAuth: true,
-      hasStorage: false,
-      overallConfidence: 90,
-      analysisMethod: 'pattern',
-      analyzedAt: new Date().toISOString(),
-    };
-
-    const analyzerInstance = {
-      analyze: vi.fn().mockResolvedValue(mockRequirements),
-    };
-    const generatorInstance = {
-      generate: vi.fn().mockReturnValue({ sql: '', tables: [], warnings: [] }),
-    };
-    const mcpClientInstance = {
-      createProject: vi.fn().mockResolvedValue({
-        ref: 'ref',
-        name: 'p',
-        apiUrl: 'https://ref.supabase.co',
-        anonKey: 'key',
+      const mockProject: SupabaseProject = {
+        ref: 'abc123def456',
+        name: 'test-project',
+        apiUrl: 'https://abc123def456.supabase.co',
+        anonKey: 'mock-anon-key',
         status: 'ACTIVE',
         createdAt: new Date().toISOString(),
-      }),
-      applyMigration: vi.fn().mockResolvedValue(undefined),
-      getProjectUrl: vi.fn().mockResolvedValue('https://ref.supabase.co'),
-      getAnonKey: vi.fn().mockResolvedValue('anon-key'),
-    };
+      };
 
-    mockAnalyzer.mockImplementation(() => analyzerInstance);
-    mockGenerator.mockImplementation(() => generatorInstance);
-    mockMCPClient.mockImplementation(() => mcpClientInstance);
+      const analyzerInstance = {
+        analyze: vi.fn().mockResolvedValue(mockRequirements),
+      };
+      const generatorInstance = {
+        generate: vi.fn().mockReturnValue(mockMigrationResult),
+      };
+      const mcpClientInstance = {
+        createProject: vi.fn().mockResolvedValue(mockProject),
+        applyMigration: vi.fn().mockResolvedValue(undefined),
+        getProjectUrl: vi.fn().mockResolvedValue('https://abc123def456.supabase.co'),
+        getAnonKey: vi.fn().mockResolvedValue('mock-anon-key'),
+      };
 
-    mockOAuth.mockReturnValue({
-      getToken: vi.fn().mockReturnValue('valid-token'),
-      isAuthenticated: true,
-      status: 'authenticated',
-      error: null,
-      login: vi.fn(),
-      logout: vi.fn(),
+      mockAnalyzer.mockImplementation(() => analyzerInstance);
+      mockGenerator.mockImplementation(() => generatorInstance);
+      mockMCPClient.mockImplementation(() => mcpClientInstance);
+
+      mockOAuth.mockReturnValue({
+        getToken: vi.fn().mockReturnValue('valid-token'),
+        isAuthenticated: true,
+        status: 'authenticated',
+        error: null,
+        login: vi.fn(),
+        logout: vi.fn(),
+      });
+
+      const { result } = renderHook(() => useBackendCreation());
+
+      const code = 'interface User { id: string; email: string; }';
+
+      await act(async () => {
+        await result.current.createBackend(code, { projectName: 'test-project' });
+      });
+
+      // After createBackend completes, requirements should be populated
+      expect(result.current.requirements).toBeDefined();
+      expect(result.current.requirements).toEqual(mockRequirements);
     });
 
-    const { result } = renderHook(() => useBackendCreation());
+    it('requirements contains expected data structure with entities', async () => {
+      const mockRequirements: BackendRequirements = {
+        entities: [
+          {
+            name: 'Product',
+            typeName: 'Product',
+            fields: [
+              { name: 'id', type: 'string', isOptional: false },
+              { name: 'name', type: 'string', isOptional: false },
+              { name: 'price', type: 'number', isOptional: true },
+            ],
+            confidence: 95,
+            matchType: 'pattern',
+          },
+        ],
+        authRequirements: [
+          {
+            type: 'login',
+            triggerPattern: 'useAuth',
+            userFields: ['email', 'password'],
+            confidence: 80,
+          },
+        ],
+        storageRequirements: [],
+        crudOperations: [
+          {
+            entity: 'Product',
+            operation: 'create',
+            triggerPattern: 'createProduct',
+            confidence: 85,
+          },
+        ],
+        hasAuth: true,
+        hasStorage: false,
+        overallConfidence: 90,
+        analysisMethod: 'pattern',
+        analyzedAt: new Date().toISOString(),
+      };
 
-    await act(async () => {
-      await result.current.createBackend('code with Product', {});
+      const analyzerInstance = {
+        analyze: vi.fn().mockResolvedValue(mockRequirements),
+      };
+      const generatorInstance = {
+        generate: vi.fn().mockReturnValue({ sql: '', tables: [], warnings: [] }),
+      };
+      const mcpClientInstance = {
+        createProject: vi.fn().mockResolvedValue({
+          ref: 'ref',
+          name: 'p',
+          apiUrl: 'https://ref.supabase.co',
+          anonKey: 'key',
+          status: 'ACTIVE',
+          createdAt: new Date().toISOString(),
+        }),
+        applyMigration: vi.fn().mockResolvedValue(undefined),
+        getProjectUrl: vi.fn().mockResolvedValue('https://ref.supabase.co'),
+        getAnonKey: vi.fn().mockResolvedValue('anon-key'),
+      };
+
+      mockAnalyzer.mockImplementation(() => analyzerInstance);
+      mockGenerator.mockImplementation(() => generatorInstance);
+      mockMCPClient.mockImplementation(() => mcpClientInstance);
+
+      mockOAuth.mockReturnValue({
+        getToken: vi.fn().mockReturnValue('valid-token'),
+        isAuthenticated: true,
+        status: 'authenticated',
+        error: null,
+        login: vi.fn(),
+        logout: vi.fn(),
+      });
+
+      const { result } = renderHook(() => useBackendCreation());
+
+      await act(async () => {
+        await result.current.createBackend('code with Product', {});
+      });
+
+      // Verify requirements structure
+      expect(result.current.requirements?.entities).toHaveLength(1);
+      expect(result.current.requirements?.entities[0].name).toBe('Product');
+      expect(result.current.requirements?.hasAuth).toBe(true);
+      expect(result.current.requirements?.crudOperations).toHaveLength(1);
     });
 
-    // Verify requirements structure
-    expect(result.current.requirements?.entities).toHaveLength(1);
-    expect(result.current.requirements?.entities[0].name).toBe('Product');
-    expect(result.current.requirements?.hasAuth).toBe(true);
-    expect(result.current.requirements?.crudOperations).toHaveLength(1);
+    it('clears requirements when reset() is called', async () => {
+      const mockRequirements: BackendRequirements = {
+        entities: [
+          {
+            name: 'Order',
+            typeName: 'Order',
+            fields: [{ name: 'id', type: 'string', isOptional: false }],
+            confidence: 80,
+            matchType: 'pattern',
+          },
+        ],
+        authRequirements: [],
+        storageRequirements: [],
+        crudOperations: [],
+        hasAuth: false,
+        hasStorage: false,
+        overallConfidence: 75,
+        analysisMethod: 'pattern',
+        analyzedAt: new Date().toISOString(),
+      };
+
+      const analyzerInstance = {
+        analyze: vi.fn().mockResolvedValue(mockRequirements),
+      };
+      const generatorInstance = {
+        generate: vi.fn().mockReturnValue({ sql: '', tables: [], warnings: [] }),
+      };
+      const mcpClientInstance = {
+        createProject: vi.fn().mockResolvedValue({
+          ref: 'ref',
+          name: 'p',
+          apiUrl: 'https://ref.supabase.co',
+          anonKey: 'key',
+          status: 'ACTIVE',
+          createdAt: new Date().toISOString(),
+        }),
+        applyMigration: vi.fn().mockResolvedValue(undefined),
+        getProjectUrl: vi.fn().mockResolvedValue('https://ref.supabase.co'),
+        getAnonKey: vi.fn().mockResolvedValue('anon-key'),
+      };
+
+      mockAnalyzer.mockImplementation(() => analyzerInstance);
+      mockGenerator.mockImplementation(() => generatorInstance);
+      mockMCPClient.mockImplementation(() => mcpClientInstance);
+
+      mockOAuth.mockReturnValue({
+        getToken: vi.fn().mockReturnValue('valid-token'),
+        isAuthenticated: true,
+        status: 'authenticated',
+        error: null,
+        login: vi.fn(),
+        logout: vi.fn(),
+      });
+
+      const { result } = renderHook(() => useBackendCreation());
+
+      await act(async () => {
+        await result.current.createBackend('code', { projectName: 'test' });
+      });
+
+      // Verify requirements is populated
+      expect(result.current.requirements).toBeDefined();
+
+      // Reset
+      act(() => {
+        result.current.reset();
+      });
+
+      // After reset, requirements should be null
+      expect(result.current.requirements).toBeNull();
+    });
   });
-
-  it('clears requirements when reset() is called', async () => {
-    const mockRequirements: BackendRequirements = {
-      entities: [
-        {
-          name: 'Order',
-          typeName: 'Order',
-          fields: [{ name: 'id', type: 'string', isOptional: false }],
-          confidence: 80,
-          matchType: 'pattern',
-        },
-      ],
-      authRequirements: [],
-      storageRequirements: [],
-      crudOperations: [],
-      hasAuth: false,
-      hasStorage: false,
-      overallConfidence: 75,
-      analysisMethod: 'pattern',
-      analyzedAt: new Date().toISOString(),
-    };
-
-    const analyzerInstance = {
-      analyze: vi.fn().mockResolvedValue(mockRequirements),
-    };
-    const generatorInstance = {
-      generate: vi.fn().mockReturnValue({ sql: '', tables: [], warnings: [] }),
-    };
-    const mcpClientInstance = {
-      createProject: vi.fn().mockResolvedValue({
-        ref: 'ref',
-        name: 'p',
-        apiUrl: 'https://ref.supabase.co',
-        anonKey: 'key',
-        status: 'ACTIVE',
-        createdAt: new Date().toISOString(),
-      }),
-      applyMigration: vi.fn().mockResolvedValue(undefined),
-      getProjectUrl: vi.fn().mockResolvedValue('https://ref.supabase.co'),
-      getAnonKey: vi.fn().mockResolvedValue('anon-key'),
-    };
-
-    mockAnalyzer.mockImplementation(() => analyzerInstance);
-    mockGenerator.mockImplementation(() => generatorInstance);
-    mockMCPClient.mockImplementation(() => mcpClientInstance);
-
-    mockOAuth.mockReturnValue({
-      getToken: vi.fn().mockReturnValue('valid-token'),
-      isAuthenticated: true,
-      status: 'authenticated',
-      error: null,
-      login: vi.fn(),
-      logout: vi.fn(),
-    });
-
-    const { result } = renderHook(() => useBackendCreation());
-
-    await act(async () => {
-      await result.current.createBackend('code', { projectName: 'test' });
-    });
-
-    // Verify requirements is populated
-    expect(result.current.requirements).toBeDefined();
-
-    // Reset
-    act(() => {
-      result.current.reset();
-    });
-
-    // After reset, requirements should be null
-    expect(result.current.requirements).toBeNull();
-  });
-});
 });

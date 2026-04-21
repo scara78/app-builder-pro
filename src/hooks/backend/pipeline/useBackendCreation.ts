@@ -152,6 +152,13 @@ export function useBackendCreation() {
       setLastCode(code);
       setLastOptions(options);
 
+      // Set creating state BEFORE any async work — prevents race condition
+      // where isCreating is read as false between the call and the first await.
+      // This ensures immediate UI feedback (loading spinner) for the user.
+      setIsCreating(true);
+      setError(null);
+      updateStage(PipelineStage.ANALYZING, 25);
+
       // Check authentication first
       if (!isAuthenticated) {
         setStage(PipelineStage.ERROR);
@@ -178,11 +185,6 @@ export function useBackendCreation() {
       const region = (options.region as Region) || 'us-east-1';
 
       try {
-        setIsCreating(true);
-        setError(null);
-
-        // ====== STAGE 1: Analyze (25%) ======
-        updateStage(PipelineStage.ANALYZING, 25);
         let requirements: BackendRequirements;
         try {
           // Check for abort before async operation
