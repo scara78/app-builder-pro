@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Key, Cpu, ShieldCheck, AlertCircle } from 'lucide-react';
 import { useSettings, AVAILABLE_MODELS } from '../../contexts/SettingsContext';
 import { sanitizeInput } from '../../utils/sanitize';
+import { logErrorSafe } from '../../utils/logger';
 import './SettingsModal.css';
 
 interface SettingsModalProps {
@@ -31,7 +32,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ onClose }) => {
       await ai.testConnection();
       setTestStatus('success');
     } catch (err) {
-      console.error(err);
+      logErrorSafe('SettingsModal', err);
       setTestStatus('error');
     }
   };

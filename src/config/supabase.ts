@@ -4,6 +4,7 @@
  */
 
 import type { SupabaseOAuthConfig } from '../hooks/backend/oauth/types';
+import { logWarnSafe } from '../utils/logger';
 
 /**
  * Get OAuth client ID from environment
@@ -12,7 +13,7 @@ import type { SupabaseOAuthConfig } from '../hooks/backend/oauth/types';
 function getOAuthClientId(): string {
   const clientId = import.meta.env.VITE_SUPABASE_OAUTH_CLIENT_ID;
   if (!clientId) {
-    console.warn('VITE_SUPABASE_OAUTH_CLIENT_ID not configured. OAuth flow may not work.');
+    logWarnSafe('SupabaseConfig', 'VITE_SUPABASE_OAUTH_CLIENT_ID not configured. OAuth flow may not work.');
     return '';
   }
   return clientId;
@@ -25,7 +26,7 @@ function getOAuthClientId(): string {
 function getRedirectUri(): string {
   const redirectUri = import.meta.env.VITE_SUPABASE_REDIRECT_URI;
   if (!redirectUri) {
-    console.warn('VITE_SUPABASE_REDIRECT_URI not configured. OAuth callback may fail.');
+    logWarnSafe('SupabaseConfig', 'VITE_SUPABASE_REDIRECT_URI not configured. OAuth callback may fail.');
     return window.location.origin + '/oauth/callback';
   }
   return redirectUri;

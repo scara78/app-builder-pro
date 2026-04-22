@@ -28,6 +28,7 @@ import React, { useState } from 'react';
 import { X, Copy, Check, ExternalLink, Eye, EyeOff, Loader2 } from 'lucide-react';
 import type { BackendCreationResult } from '../../hooks/backend/pipeline/types';
 import type { BackendRequirements } from '../../services/analyzer/types';
+import { logErrorSafe } from '../../utils/logger';
 import './CredentialsModal.css';
 
 /**
@@ -62,7 +63,7 @@ const CredentialsModal: React.FC<CredentialsModalProps> = ({
       setCopiedField(field);
       setTimeout(() => setCopiedField(null), 2000);
     } catch (err) {
-      console.error('Failed to copy:', err);
+      logErrorSafe('CredentialsModal', err);
     }
   };
 

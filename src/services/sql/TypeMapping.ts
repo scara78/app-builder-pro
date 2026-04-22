@@ -5,6 +5,8 @@
  * Provides predictable fallbacks for unknown types.
  */
 
+import { logWarnSafe } from '../../utils/logger';
+
 // TypeScript type constants
 export enum TS_TYPE {
   STRING = 'string',
@@ -90,7 +92,7 @@ export function getPostgresType(
     if (logger) {
       logger(warning);
     } else {
-      console.warn(warning);
+      logWarnSafe('TypeMapping', warning);
     }
   }
 

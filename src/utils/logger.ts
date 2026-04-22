@@ -136,8 +136,65 @@ export function logError(context: string, error: unknown): void {
  */
 export function logErrorSafe(context: string, error: unknown): void {
   if (error instanceof Error) {
-    console.error(`[${context}] ${redactCredentials(error.message)}`);
+    const redactedMessage = redactCredentials(error.message);
+    if (import.meta.env.PROD && error.stack) {
+      console.error(`[${context}] ${redactedMessage}\n${sanitizeStackTrace(error.stack)}`);
+    } else {
+      console.error(`[${context}] ${redactedMessage}`);
+    }
   } else {
     console.error(`[${context}] Unknown error`);
   }
+}
+
+/**
+ * Logs warning with redacted message for debugging.
+ * Use this instead of console.warn(message) throughout the codebase.
+ * Redacts any credentials that might appear in the warning message.
+ *
+ * @param context - Where the warning occurred (e.g. 'SupabaseConfig', 'TypeMapping')
+ * @param message - The warning message string
+ *
+ * @example
+ * // Instead of: console.warn('VITE_SUPABASE_OAUTH_CLIENT_ID not configured')
+ * // Use: logWarnSafe('SupabaseConfig', 'VITE_SUPABASE_OAUTH_CLIENT_ID not configured')
+ */
+export function logWarnSafe(context: string, message: string): void {
+  console.warn(`[${context}] ${redactCredentials(message)}`);
+}
+
+/**
+ * Sanitizes stack traces for production logging.
+ * Strips URL query parameters (which may contain tokens/keys)
+ * and truncates long file paths to last 3 segments.
+ *
+ * Only intended for use when import.meta.env.PROD === true.
+ *
+ * @param stack - The error stack trace string
+ * @returns Sanitized stack trace with credentials removed from URLs
+ *
+ * @example
+ * sanitizeStackTrace('Error at http://api.com?token=abc123 (file: /very/long/path/to/src/file.ts:1:1)')
+ * // => 'Error at http://api.com (file: path/to/src/file.ts:1:1)'
+ */
+export function sanitizeStackTrace(stack: string): string {
+  let result = stack;
+
+  // Strip URL query parameters (e.g., ?token=abc, ?key=xyz)
+  result = result.replace(/\?([^\s)]*)/g, '');
+
+  // Truncate file paths longer than 80 chars to last 3 segments
+  result = result.replace(
+    /(?:at\s+)?(?:\()?(\/[^\s):]+)(?::\d+:\d+)?(?:\))?/g,
+    (match, filePath: string) => {
+      if (filePath.length > 80) {
+        const segments = filePath.split('/');
+        const last3 = segments.slice(-3).join('/');
+        return match.replace(filePath, last3);
+      }
+      return match;
+    }
+  );
+
+  return result;
 }

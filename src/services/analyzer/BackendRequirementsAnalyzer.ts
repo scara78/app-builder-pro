@@ -17,6 +17,7 @@ import { PatternMatcher, type PatternAnalysis } from './PatternMatcher';
 import { ConfidenceCalculator } from './confidence';
 import { AIFallbackAnalyzer } from './AIFallbackAnalyzer';
 import { AnalysisCache } from './cache';
+import { logWarnSafe } from '../../utils/logger';
 
 /**
  * Options for BackendRequirementsAnalyzer
@@ -191,13 +192,10 @@ export class BackendRequirementsAnalyzer {
 
       // Combine pattern and AI results
       return this.mergeResults(patternResult, aiResult, 'hybrid');
-    } catch (error) {
-      // If AI fails, fall back to pattern-only
-      console.warn(
-        '[BackendRequirementsAnalyzer] AI fallback failed, using pattern results:',
-        error
-      );
-      return this.combineResults(patternResult, 'pattern');
+  } catch (error) {
+    // If AI fails, fall back to pattern-only
+    logWarnSafe('BackendRequirementsAnalyzer', 'AI fallback failed, using pattern results');
+    return this.combineResults(patternResult, 'pattern');
     }
   }
 

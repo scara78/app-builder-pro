@@ -78,7 +78,7 @@ useEffect(() => {
       setData(result);
     } catch (err) {
       setError('Failed to load data. Please try again.');
-      console.error('Fetch error:', err);
+      logErrorSafe('Fetch', err);
     } finally {
       setLoading(false);
     }

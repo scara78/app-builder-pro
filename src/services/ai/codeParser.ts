@@ -63,6 +63,20 @@ export function parseAIResponse(text: string): ParseResult {
     warnings.push(`Se detectaron ${emptyPaths.length} archivos con path inválido o muy corto`);
   }
 
+  // Detect unclosed code blocks: count standalone ``` lines (including ```language)
+  const backtickLineCount = lines.filter((l) => /^\s*```\S*\s*$/.test(l)).length;
+  if (backtickLineCount % 2 !== 0) {
+    warnings.push('Unclosed code block detected');
+  }
+
+  // Detect empty file content: file with File marker but content is only whitespace
+  const emptyContentFiles = files.filter((f) => !f.content || f.content.trim().length === 0);
+  if (emptyContentFiles.length > 0) {
+    emptyContentFiles.forEach((f) => {
+      warnings.push(`Empty file content for: ${f.path}`);
+    });
+  }
+
   const message = messageLines.join('\n').trim();
   if (!message || message.length < 10) {
     warnings.push('El mensaje de explicación está vacío o es muy corto');

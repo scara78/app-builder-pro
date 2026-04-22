@@ -6,6 +6,7 @@ import PreviewPanel from '../components/preview/PreviewPanel';
 import CodeEditor from '../components/editor/CodeEditor';
 import FileExplorer from '../components/editor/FileExplorer';
 import ConsolePanel from '../components/common/ConsolePanel';
+import BuildErrorPanel from '../components/common/BuildErrorPanel';
 import BackendCreationModal from '../components/backend/BackendCreationModal';
 import CredentialsModal from '../components/backend/CredentialsModal';
 import { ToastProvider, useToast } from '../components/common/Toast';
@@ -19,6 +20,7 @@ import { useSupabaseOAuth } from '../hooks/backend/oauth/useSupabaseOAuth';
 import { adaptProject } from '../services/adapter';
 import SettingsModal from '../components/settings/SettingsModal';
 import { PipelineStage } from '../hooks/backend/pipeline/types';
+import { getGenericErrorMessage, logErrorSafe, logWarnSafe } from '../utils/logger';
 import './BuilderPage.css';
 import '../components/common/Toast.css';
 
@@ -46,6 +48,7 @@ const BuilderPageInner: React.FC<BuilderPageProps> = ({ initialPrompt }) => {
   const [showCredentialsModal, setShowCredentialsModal] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const [_applyError, setApplyError] = useState<string | null>(null);
+  const [lastError, setLastError] = useState<unknown>(null);
   const { getEffectiveApiKey, modelId } = useSettings();
   const { showToast } = useToast();
 
@@ -98,6 +101,10 @@ const BuilderPageInner: React.FC<BuilderPageProps> = ({ initialPrompt }) => {
 
         setMessages((prev) => [...prev, assistantMsg]);
 
+        if (response.warnings && response.warnings.length > 0) {
+          response.warnings.forEach(w => showToast({ message: w, type: 'error' }));
+        }
+
         if (response.files && response.files.length > 0) {
           setCurrentFiles(response.files);
           setActiveFile(
@@ -118,12 +125,18 @@ const BuilderPageInner: React.FC<BuilderPageProps> = ({ initialPrompt }) => {
           setBuilderState('idle');
         }
       } catch (error) {
-        console.error('Build error:', error);
+        setLastError(error);
         setBuilderState('error');
       }
     },
-    [generate, mount, install, runDev, getEffectiveApiKey, modelId, resetBackend]
+    [generate, mount, install, runDev, getEffectiveApiKey, modelId, resetBackend, showToast]
   );
+
+  // Handler for retry after build error
+  const handleRetry = useCallback(() => {
+    setBuilderState('idle');
+    setLastError(null);
+  }, []);
 
   // Initialize build with prompt - only once
   useEffect(() => {
@@ -190,7 +203,7 @@ const BuilderPageInner: React.FC<BuilderPageProps> = ({ initialPrompt }) => {
 
     // Guard clause: need result
     if (!backendResult) {
-      console.warn('Cannot apply backend: missing result');
+      logWarnSafe('ApplyBackend', 'Cannot apply backend: missing result');
       showToast({
         message: 'Backend result not available. Please recreate the backend.',
         type: 'error',
@@ -200,7 +213,7 @@ const BuilderPageInner: React.FC<BuilderPageProps> = ({ initialPrompt }) => {
 
     // Guard clause: need requirements
     if (!backendRequirements) {
-      console.warn('Cannot apply backend: missing requirements');
+      logWarnSafe('ApplyBackend', 'Cannot apply backend: missing requirements');
       showToast({
         message: 'Backend requirements not available. Please recreate the backend.',
         type: 'error',
@@ -253,7 +266,7 @@ const BuilderPageInner: React.FC<BuilderPageProps> = ({ initialPrompt }) => {
         type: 'success',
       });
     } catch (error) {
-      console.error('Failed to apply backend:', error);
+      logErrorSafe('ApplyBackend', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       setApplyError(errorMessage);
       showToast({
@@ -315,7 +328,14 @@ const BuilderPageInner: React.FC<BuilderPageProps> = ({ initialPrompt }) => {
               </div>
             </div>
 
-            <div className="workspace-content">
+              <div className="workspace-content">
+          {builderState === 'error' ? (
+            <BuildErrorPanel
+              message={lastError ? getGenericErrorMessage(lastError) : 'An unexpected error occurred.'}
+              onRetry={handleRetry}
+            />
+          ) : (
+            <>
               {activeTab === 'preview' ? (
                 <PreviewPanel state={builderState} url={previewUrl} />
               ) : (
@@ -328,7 +348,9 @@ const BuilderPageInner: React.FC<BuilderPageProps> = ({ initialPrompt }) => {
                   />
                 </div>
               )}
-            </div>
+            </>
+          )}
+        </div>
 
             <ConsolePanel logs={consoleLogs} />
           </Panel>

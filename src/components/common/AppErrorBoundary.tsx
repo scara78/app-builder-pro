@@ -1,5 +1,5 @@
 import { Component, type ReactNode } from 'react';
-import { getGenericErrorMessage } from '../../utils/logger';
+import { getGenericErrorMessage, logErrorSafe } from '../../utils/logger';
 
 interface Props {
   children: ReactNode;
@@ -22,7 +22,10 @@ export class AppErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('ErrorBoundary caught:', error, errorInfo);
+    logErrorSafe('ErrorBoundary', error);
+    if (!import.meta.env.PROD && errorInfo.componentStack) {
+      console.error('[ErrorBoundary] Component stack:', errorInfo.componentStack);
+    }
   }
 
   handleReset = () => {

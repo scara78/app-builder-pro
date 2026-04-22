@@ -5,7 +5,7 @@
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { redactCredentials, logErrorSafe } from '../../utils/logger';
+import { redactCredentials, logErrorSafe, logWarnSafe } from '../../utils/logger';
 import type {
   BackendRequirements,
   Entity,
@@ -151,7 +151,7 @@ export class AIFallbackAnalyzer {
    * Handle malformed AI response
    */
   handleMalformedResponse(): BackendRequirements {
-    console.warn('[AIFallbackAnalyzer] Malformed AI response, returning fallback');
+    logWarnSafe('AIFallbackAnalyzer', 'Malformed AI response, returning fallback');
     return this.createFallbackResult('Malformed AI response');
   }
 

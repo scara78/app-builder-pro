@@ -6,6 +6,8 @@
  * including analytics preferences and timestamp for GDPR compliance.
  */
 
+import { logWarnSafe } from './logger';
+
 /**
  * Consent state structure stored in localStorage
  */
@@ -67,7 +69,7 @@ export function setConsent(state: Omit<ConsentState, 'essential' | 'version'>): 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(consentState));
   } catch {
     // localStorage might be full or disabled - fail silently
-    console.warn('Failed to save consent state to localStorage');
+    logWarnSafe('ConsentStorage', 'Failed to save consent state to localStorage');
   }
 }
 
@@ -78,6 +80,6 @@ export function clearConsent(): void {
   try {
     localStorage.removeItem(STORAGE_KEY);
   } catch {
-    console.warn('Failed to clear consent state from localStorage');
+    logWarnSafe('ConsentStorage', 'Failed to clear consent state from localStorage');
   }
 }

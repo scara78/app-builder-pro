@@ -50,14 +50,14 @@ describe('TypeMapping', () => {
       expect(getPostgresType('string')).toBe('TEXT');
     });
 
-    // TM-E001: Unknown type default
-    it('should default unknown types to TEXT and log warning', () => {
-      const result = getPostgresType('CustomType');
-      expect(result).toBe('TEXT');
-      expect(warnSpy).toHaveBeenCalledWith(
-        'Unknown TypeScript type "CustomType", defaulting to TEXT'
-      );
-    });
+  // TM-E001: Unknown type default
+  it('should default unknown types to TEXT and log warning', () => {
+    const result = getPostgresType('CustomType');
+    expect(result).toBe('TEXT');
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[TypeMapping] Unknown TypeScript type "CustomType", defaulting to TEXT'
+    );
+  });
 
     // TM-E002: Array type mapping
     it('should map string[] to TEXT[]', () => {
