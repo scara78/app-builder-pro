@@ -56,7 +56,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ files = [] }) => {
   const renderTree = (nodes: TreeNode[], depth: number = 0): React.ReactNode => {
     return nodes.map((item, i) => (
       <div key={`${depth}-${i}`} className="tree-item">
-        <div className={`item-row ${item.type}`}>
+        <div className={`item-row ${item.type}`} data-testid="item-row" data-type={item.type}>
           {item.type === 'folder' ? (
             <>
               {item.isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -65,18 +65,22 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ files = [] }) => {
           ) : (
             <File size={14} className="file-icon" />
           )}
-          <span className="item-name">{item.name}</span>
+          <span className="item-name" data-testid="item-name">
+            {item.name}
+          </span>
         </div>
 
         {item.type === 'folder' && item.isOpen && item.children && (
-          <div className="tree-children">{renderTree(item.children, depth + 1)}</div>
+          <div className="tree-children" data-testid="tree-children">
+            {renderTree(item.children, depth + 1)}
+          </div>
         )}
       </div>
     ));
   };
 
   return (
-    <div className="file-explorer">
+    <div className="file-explorer" data-testid="file-explorer">
       <div className="explorer-header">
         <span>Files</span>
         <div className="explorer-actions">
@@ -89,7 +93,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ files = [] }) => {
         </div>
       </div>
 
-      <div className="file-tree">
+      <div className="file-tree" data-testid="file-tree">
         {tree.length > 0 ? renderTree(tree) : <div className="empty-state">No files</div>}
       </div>
     </div>

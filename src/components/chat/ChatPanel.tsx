@@ -62,7 +62,12 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, onSendMessage, isGenera
           </div>
         ) : (
           messages.map((msg) => (
-            <div key={msg.id} className={`message-item ${msg.role}`}>
+            <div
+              key={msg.id}
+              className={`message-item ${msg.role}`}
+              data-testid="message-item"
+              data-role={msg.role}
+            >
               <div className="message-avatar">
                 {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
               </div>
@@ -80,7 +85,11 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, onSendMessage, isGenera
           ))
         )}
         {isGenerating && (
-          <div className="message-item assistant generating">
+          <div
+            className="message-item assistant generating"
+            data-testid="message-item"
+            data-role="assistant"
+          >
             <div className="message-avatar pulse">
               <Bot size={16} />
             </div>
@@ -88,7 +97,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ messages, onSendMessage, isGenera
               <div className="message-header">
                 <span className="sender">AI Assistant</span>
               </div>
-              <div className="typing-indicator">
+              <div className="typing-indicator" data-testid="typing-indicator">
                 <span></span>
                 <span></span>
                 <span></span>

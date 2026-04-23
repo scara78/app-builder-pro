@@ -21,9 +21,10 @@ const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({ isOpen, onClose
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" data-testid="privacy-modal-overlay" onClick={onClose}>
       <div
         className="modal-content privacy-modal"
+        data-testid="privacy-modal-content"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-label="Privacy Policy"

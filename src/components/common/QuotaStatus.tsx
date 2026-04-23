@@ -36,6 +36,8 @@ export function QuotaStatus() {
     return (
       <div
         className="quota-status error"
+        data-testid="quota-status"
+        data-level="error"
         title={`${stats.errorCount} errors - circuit breaker active`}
       >
         <AlertTriangle size={14} />
@@ -46,7 +48,12 @@ export function QuotaStatus() {
 
   if (stats.requestCount > 10) {
     return (
-      <div className="quota-status warning" title={`${stats.requestCount}/15 requests used`}>
+      <div
+        className="quota-status warning"
+        data-testid="quota-status"
+        data-level="warning"
+        title={`${stats.requestCount}/15 requests used`}
+      >
         <Activity size={14} />
         <span>{stats.requestsRemaining}</span>
       </div>
@@ -54,7 +61,12 @@ export function QuotaStatus() {
   }
 
   return (
-    <div className="quota-status ok" title={`${stats.requestCount}/15 requests used`}>
+    <div
+      className="quota-status ok"
+      data-testid="quota-status"
+      data-level="ok"
+      title={`${stats.requestCount}/15 requests used`}
+    >
       <Shield size={14} />
       <span>{stats.requestsRemaining}</span>
     </div>

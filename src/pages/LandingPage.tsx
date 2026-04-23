@@ -32,32 +32,37 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStartBuild }) => {
   };
 
   return (
-    <div className="landing-container">
+    <div className="landing-container" data-testid="landing-container">
       {/* Background Orbs */}
       <div className="bg-orb orb-1"></div>
       <div className="bg-orb orb-2"></div>
 
-      <header className="landing-header">
+      <header className="landing-header" data-testid="landing-header">
         <div className="logo-container">
           <Sparkles className="logo-icon" />
           <span className="logo-text">
             App Builder <span>Pro</span>
           </span>
         </div>
-        <nav className="landing-nav">
+        <nav className="landing-nav" data-testid="landing-nav">
           <a href="#">Showcase</a>
           <a href="#">Templates</a>
           <div className="divider-h"></div>
-          <button className="btn-icon-landing" onClick={() => setIsSettingsOpen(true)}>
+          <button
+            className="btn-icon-landing"
+            data-testid="btn-settings"
+            onClick={() => setIsSettingsOpen(true)}
+          >
             <Settings size={20} />
           </button>
           <button className="btn-outline">Sign In</button>
         </nav>
       </header>
 
-      <main className="landing-main">
+      <main className="landing-main" data-testid="landing-main">
         <motion.div
           className="hero-content"
+          data-testid="hero-content"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
@@ -76,16 +81,22 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStartBuild }) => {
           </p>
 
           <form className="prompt-form" onSubmit={handleSubmit}>
-            <div className="prompt-input-wrapper glass">
+            <div className="prompt-input-wrapper glass" data-testid="prompt-input-wrapper">
               <Terminal className="input-icon" />
               <input
                 type="text"
+                data-testid="prompt-input"
                 placeholder="What do you want to build today?"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 autoFocus
               />
-              <button type="submit" className="btn-primary" disabled={!prompt.trim()}>
+              <button
+                type="submit"
+                className="btn-primary"
+                data-testid="btn-primary"
+                disabled={!prompt.trim()}
+              >
                 Build App
               </button>
             </div>
@@ -105,6 +116,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStartBuild }) => {
 
         <motion.div
           className="feature-grid"
+          data-testid="feature-grid"
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
@@ -127,7 +139,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStartBuild }) => {
         </motion.div>
       </main>
 
-      <footer className="landing-footer">
+      <footer className="landing-footer" data-testid="landing-footer">
         <p>© 2026 App Builder Pro AI Labs. Built with &lt;3 for builders.</p>
         <button type="button" className="privacy-link" onClick={() => setIsPrivacyOpen(true)}>
           Privacy Policy

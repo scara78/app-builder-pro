@@ -27,17 +27,17 @@ const defaultLogs: ConsoleLog[] = [
 
 const ConsolePanel: React.FC<ConsolePanelProps> = ({ logs = defaultLogs }) => {
   return (
-    <div className="console-panel">
-      <div className="console-header">
+    <div className="console-panel" data-testid="console-panel">
+      <div className="console-header" data-testid="console-header">
         <div className="header-title">
           <Terminal size={14} className="icon-terminal" />
           <span>Output Console</span>
         </div>
-        <div className="console-actions">
+        <div className="console-actions" data-testid="console-actions">
           <button title="Clear Logs">
             <Trash2 size={14} />
           </button>
-          <div className="divider-v"></div>
+          <div className="divider-v" data-testid="divider-v"></div>
           <button title="Close Console">
             <X size={14} />
           </button>
@@ -46,9 +46,18 @@ const ConsolePanel: React.FC<ConsolePanelProps> = ({ logs = defaultLogs }) => {
 
       <div className="console-content">
         {logs.map((log, i) => (
-          <div key={i} className={`log-entry ${log.type}`}>
-            <span className="log-time">[{log.timestamp}]</span>
-            <span className="log-text">{log.text}</span>
+          <div
+            key={i}
+            className={`log-entry ${log.type}`}
+            data-testid="log-entry"
+            data-type={log.type}
+          >
+            <span className="log-time" data-testid="log-time">
+              [{log.timestamp}]
+            </span>
+            <span className="log-text" data-testid="log-text">
+              {log.text}
+            </span>
           </div>
         ))}
       </div>
