@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AIOrchestrator } from '../services/ai/AIOrchestrator';
-import { redactCredentials, logErrorSafe } from '../utils/logger';
+import { redactCredentials, logErrorSafe, logWarnSafe } from '../utils/logger';
 
 // Mock quota manager
 vi.mock('../services/ai/AIQuotaManager', () => ({
@@ -148,5 +148,18 @@ describe('SEC-04b: Credential Redaction', () => {
     expect(logContent).toContain('Unknown error');
 
     consoleErrorMock.mockRestore();
+  });
+
+  it('logWarnSafe should redact credentials and include context prefix', () => {
+    const consoleWarnMock = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    logWarnSafe('TestContext', 'API key AIzaSyB1234567890abcdefghijklmnopqrstuv leaked');
+
+    const logContent = consoleWarnMock.mock.calls.map((c: any) => c.join(' ')).join(' ');
+    expect(logContent).toContain('[REDACTED_API_KEY]');
+    expect(logContent).toContain('[TestContext]');
+    expect(logContent).not.toContain('AIzaSyB1234567890abcdefghijklmnopqrstuv');
+
+    consoleWarnMock.mockRestore();
   });
 });

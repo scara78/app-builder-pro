@@ -236,7 +236,7 @@ const BuilderPageInner: React.FC<BuilderPageProps> = ({ initialPrompt }) => {
 
       // If adaptation was skipped, show toast and keep modal open
       if (adapted.skipped) {
-        console.log('Backend adaptation skipped:', adapted.reason);
+        logWarnSafe('ApplyBackend', `Backend adaptation skipped: ${adapted.reason}`);
         showToast({
           message:
             adapted.reason ||

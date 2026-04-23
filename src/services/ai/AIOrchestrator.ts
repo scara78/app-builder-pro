@@ -3,7 +3,7 @@ import { type ProjectFile, type AIResponse } from '../../types';
 import { SYSTEM_PROMPT } from './prompts';
 import { parseAIResponse } from './codeParser';
 import { quotaManager } from './AIQuotaManager';
-import { logErrorSafe } from '../../utils/logger';
+import { logErrorSafe, logInfoSafe } from '../../utils/logger';
 
 export class AIOrchestrator {
   private static instance: AIOrchestrator;
@@ -25,7 +25,7 @@ export class AIOrchestrator {
 
   public updateConfig(apiKey: string, modelId: string) {
     // SEC-02: Only log non-sensitive configuration
-    console.log('[AIOrchestrator] Updating config:', { modelId, hasApiKey: !!apiKey });
+    logInfoSafe('AIOrchestrator', `Updating config: modelId=${modelId}, hasApiKey=${!!apiKey}`);
     this.modelId = modelId;
     if (apiKey && apiKey !== this.currentApiKey) {
       this.currentApiKey = apiKey;
@@ -58,7 +58,7 @@ export class AIOrchestrator {
     }
 
     // SEC-02: Log only prompt length, not content (security best practice)
-    console.log('Generating app via Gemini SDK. Prompt length:', prompt.length);
+    logInfoSafe('AIOrchestrator', `Generating app via Gemini SDK. Prompt length: ${prompt.length}`);
 
     const sanitizedPrompt = this.sanitizeInput(prompt);
 

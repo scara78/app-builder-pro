@@ -164,6 +164,25 @@ export function logWarnSafe(context: string, message: string): void {
 }
 
 /**
+ * Logs info message with redacted content for debugging.
+ * Dev-only — info logs are suppressed entirely in production.
+ * Use this instead of console.log() throughout the codebase.
+ * Redacts any credentials that might appear in the message.
+ *
+ * @param context - Where the log originates (e.g. 'MCPClient', 'AIOrchestrator')
+ * @param message - The info message string
+ *
+ * @example
+ * // Instead of: console.log('[MCPClient] Retry attempt 1:', error.message)
+ * // Use: logInfoSafe('MCPClient', `Retry attempt 1: ${error.message}`)
+ */
+export function logInfoSafe(context: string, message: string): void {
+  if (!import.meta.env.PROD) {
+    console.log(`[${context}] ${redactCredentials(message)}`);
+  }
+}
+
+/**
  * Sanitizes stack traces for production logging.
  * Strips URL query parameters (which may contain tokens/keys)
  * and truncates long file paths to last 3 segments.

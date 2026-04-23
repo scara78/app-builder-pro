@@ -1,5 +1,6 @@
 import { WebContainer } from '@webcontainer/api';
 import { type FileSystemTree } from '../../types';
+import { logInfoSafe } from '../../utils/logger';
 
 export class WebContainerManager {
   private static instance: WebContainerManager;
@@ -20,7 +21,7 @@ export class WebContainerManager {
   public async boot(): Promise<WebContainer> {
     if (this.webcontainerInstance) return this.webcontainerInstance;
 
-    console.log('Booting WebContainer...');
+    logInfoSafe('WebContainer', 'Booting WebContainer...');
     this.webcontainerInstance = await WebContainer.boot();
     return this.webcontainerInstance;
   }
