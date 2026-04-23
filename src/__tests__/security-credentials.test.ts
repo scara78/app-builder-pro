@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -7,6 +7,12 @@ const projectRoot = path.resolve(__dirname, '../..');
 const envExamplePath = path.resolve(projectRoot, '.env.example');
 
 describe('SEC-01: Credential Exposure Prevention', () => {
+  // Silence console.log/warn/error in test output — security scan output only
+  beforeEach(() => {
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
   // ============ Helper Functions ============
 
   /**

@@ -192,10 +192,10 @@ export class BackendRequirementsAnalyzer {
 
       // Combine pattern and AI results
       return this.mergeResults(patternResult, aiResult, 'hybrid');
-  } catch (error) {
-    // If AI fails, fall back to pattern-only
-    logWarnSafe('BackendRequirementsAnalyzer', 'AI fallback failed, using pattern results');
-    return this.combineResults(patternResult, 'pattern');
+    } catch (_error) {
+      // If AI fails, fall back to pattern-only
+      logWarnSafe('BackendRequirementsAnalyzer', 'AI fallback failed, using pattern results');
+      return this.combineResults(patternResult, 'pattern');
     }
   }
 

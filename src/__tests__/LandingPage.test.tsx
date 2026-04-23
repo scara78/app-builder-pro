@@ -43,7 +43,7 @@ describe('LandingPage', () => {
       render(<LandingPage onStartBuild={mockOnStartBuild} />);
 
       // Then - Hero title is visible
-      const title = getTextContent('.hero-title');
+      const title = getTextContent('[data-testid="hero-content"] .hero-title');
       expect(title).toContain('Build any app');
       expect(title).toContain('with just a prompt');
     });
@@ -53,7 +53,7 @@ describe('LandingPage', () => {
       render(<LandingPage onStartBuild={mockOnStartBuild} />);
 
       // Then - Description text is visible
-      const description = getTextContent('.hero-description');
+      const description = getTextContent('[data-testid="hero-content"] .hero-description');
       expect(description).toContain('The intelligent builder');
     });
 
@@ -74,7 +74,7 @@ describe('LandingPage', () => {
       render(<LandingPage onStartBuild={mockOnStartBuild} />);
 
       // Then - Feature cards are visible
-      const features = getTextContent('.feature-grid');
+      const features = getTextContent('[data-testid="feature-grid"]');
       expect(features).toContain('Real Code Generation');
       expect(features).toContain('In-Browser Preview');
       expect(features).toContain('Iterative Building');
@@ -85,7 +85,7 @@ describe('LandingPage', () => {
       render(<LandingPage onStartBuild={mockOnStartBuild} />);
 
       // Then - Footer copyright is visible
-      const footer = getTextContent('.landing-footer');
+      const footer = getTextContent('[data-testid="landing-footer"]');
       expect(footer).toContain('2026 App Builder Pro AI Labs');
     });
 
@@ -94,7 +94,7 @@ describe('LandingPage', () => {
       render(<LandingPage onStartBuild={mockOnStartBuild} />);
 
       // Then - Example chips are visible
-      const examples = getTextContent('.examples-list');
+      const examples = getTextContent('[data-testid="hero-content"] .examples-list');
       expect(examples).toContain('A modern SaaS dashboard with dark mode');
       expect(examples).toContain('A personal portfolio');
     });
@@ -104,7 +104,7 @@ describe('LandingPage', () => {
       render(<LandingPage onStartBuild={mockOnStartBuild} />);
 
       // Then - Logo text is visible
-      const logo = getTextContent('.logo-text');
+      const logo = getTextContent('[data-testid="landing-header"] .logo-text');
       expect(logo).toContain('App Builder Pro');
     });
 
@@ -113,7 +113,7 @@ describe('LandingPage', () => {
       render(<LandingPage onStartBuild={mockOnStartBuild} />);
 
       // Then - Nav links are visible
-      const nav = getTextContent('.landing-nav');
+      const nav = getTextContent('[data-testid="landing-nav"]');
       expect(nav).toContain('Showcase');
       expect(nav).toContain('Templates');
     });
@@ -181,7 +181,9 @@ describe('LandingPage', () => {
       const settingsModalBefore = document.querySelector('[data-testid="settings-modal"]');
 
       // When - User clicks settings button
-      const settingsButton = document.querySelector('.btn-icon-landing') as HTMLButtonElement;
+      const settingsButton = document.querySelector(
+        '[data-testid="btn-settings"]'
+      ) as HTMLButtonElement;
       fireEvent.click(settingsButton);
 
       // Then - Settings modal is opened
@@ -210,9 +212,7 @@ describe('LandingPage', () => {
       render(<LandingPage onStartBuild={mockOnStartBuild} />);
 
       // When/Then - Input exists with correct placeholder
-      const input = document.querySelector(
-        'input[placeholder*="What do you want to build"]'
-      ) as HTMLInputElement;
+      const input = document.querySelector('[data-testid="prompt-input"]') as HTMLInputElement;
       expect(input).not.toBeNull();
       expect(input?.getAttribute('type')).toBe('text');
     });
@@ -222,10 +222,10 @@ describe('LandingPage', () => {
       const { container } = render(<LandingPage onStartBuild={mockOnStartBuild} />);
 
       // Then - Container structure exists
-      expect(container.querySelector('.landing-container')).not.toBeNull();
-      expect(container.querySelector('.landing-header')).not.toBeNull();
-      expect(container.querySelector('.landing-main')).not.toBeNull();
-      expect(container.querySelector('.landing-footer')).not.toBeNull();
+      expect(container.querySelector('[data-testid="landing-container"]')).not.toBeNull();
+      expect(container.querySelector('[data-testid="landing-header"]')).not.toBeNull();
+      expect(container.querySelector('[data-testid="landing-main"]')).not.toBeNull();
+      expect(container.querySelector('[data-testid="landing-footer"]')).not.toBeNull();
     });
   });
 
@@ -253,7 +253,7 @@ describe('LandingPage', () => {
       render(<LandingPage onStartBuild={mockOnStartBuild} />);
 
       // Then - Nav section exists
-      const nav = document.querySelector('.landing-nav');
+      const nav = document.querySelector('[data-testid="landing-nav"]');
       expect(nav).not.toBeNull();
     });
   });
@@ -264,7 +264,7 @@ describe('LandingPage', () => {
       const { container } = render(<LandingPage onStartBuild={mockOnStartBuild} />);
 
       // Then - Hero content exists
-      expect(container.querySelector('.hero-content')).not.toBeNull();
+      expect(container.querySelector('[data-testid="hero-content"]')).not.toBeNull();
     });
 
     it('renders feature grid section', () => {
@@ -272,7 +272,7 @@ describe('LandingPage', () => {
       const { container } = render(<LandingPage onStartBuild={mockOnStartBuild} />);
 
       // Then - Feature grid exists
-      expect(container.querySelector('.feature-grid')).not.toBeNull();
+      expect(container.querySelector('[data-testid="feature-grid"]')).not.toBeNull();
     });
   });
 });

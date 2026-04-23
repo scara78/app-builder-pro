@@ -178,6 +178,7 @@ export function logWarnSafe(context: string, message: string): void {
  */
 export function logInfoSafe(context: string, message: string): void {
   if (!import.meta.env.PROD) {
+    // eslint-disable-next-line no-console
     console.log(`[${context}] ${redactCredentials(message)}`);
   }
 }

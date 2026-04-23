@@ -11,36 +11,36 @@ vi.mock('../contexts/SettingsContext', () => ({ useSettings: () => ({}) }));
 describe('App', () => {
   it('renders without crashing', () => {
     const { container } = render(<App />);
-    expect(container.querySelector('.app-container')).not.toBeNull();
+    expect(container.querySelector('[data-testid="app-container"]')).not.toBeNull();
   });
 
   it('shows LandingPage by default', () => {
     render(<App />);
-    expect(document.querySelector('.landing-container')).not.toBeNull();
+    expect(document.querySelector('[data-testid="landing-container"]')).not.toBeNull();
   });
 
   it('shows landing header', () => {
     render(<App />);
-    expect(document.querySelector('.landing-header')).not.toBeNull();
+    expect(document.querySelector('[data-testid="landing-header"]')).not.toBeNull();
   });
 
   it('shows landing main content', () => {
     render(<App />);
-    expect(document.querySelector('.landing-main')).not.toBeNull();
+    expect(document.querySelector('[data-testid="landing-main"]')).not.toBeNull();
   });
 
   it('contains prompt input', () => {
     render(<App />);
-    expect(document.querySelector('.prompt-input-wrapper input')).not.toBeNull();
+    expect(document.querySelector('[data-testid="prompt-input"]')).not.toBeNull();
   });
 
   it('contains build button', () => {
     render(<App />);
-    expect(document.querySelector('.btn-primary')).not.toBeNull();
+    expect(document.querySelector('[data-testid="btn-primary"]')).not.toBeNull();
   });
 
   it('contains feature grid', () => {
     render(<App />);
-    expect(document.querySelector('.feature-grid')).not.toBeNull();
+    expect(document.querySelector('[data-testid="feature-grid"]')).not.toBeNull();
   });
 });

@@ -7,7 +7,7 @@
  * - SQLGenerator (CHANGE 3)
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PatternMatcher } from '../../services/analyzer/PatternMatcher';
 import type { BackendRequirements } from '../../services/analyzer/types';
 import { SQLGenerator } from '../../services/sql/SQLGenerator';
@@ -45,6 +45,11 @@ function transformToBackendRequirements(
 }
 
 describe('E2E Integration: React Code → SQL Generation', () => {
+  // Silence console.log in test output — debug info only
+  beforeEach(() => {
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+  });
+
   const patternMatcher = new PatternMatcher();
   const sqlGenerator = new SQLGenerator();
 
