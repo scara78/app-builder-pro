@@ -1,31 +1,67 @@
-import React from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Terminal, Trash2, X } from 'lucide-react';
 import './ConsolePanel.css';
-
-interface ConsoleLog {
-  type: 'info' | 'success' | 'warn' | 'error';
-  text: string;
-  timestamp: string;
-}
+import type { ConsoleLog } from '../../types';
 
 interface ConsolePanelProps {
-  logs?: ConsoleLog[];
+  logs: ConsoleLog[];
+  onClear?: () => void;
+  onClose?: () => void;
 }
 
-const defaultLogs: ConsoleLog[] = [
-  { type: 'info', text: 'Initializing WebContainer core...', timestamp: '09:42:01' },
-  { type: 'info', text: 'Mounting virtual file system...', timestamp: '09:42:02' },
-  { type: 'success', text: 'WebContainer process ready.', timestamp: '09:42:03' },
-  { type: 'info', text: 'Running npm install...', timestamp: '09:42:05' },
-  { type: 'warn', text: 'Found 2 vulnerabilities in dependencies.', timestamp: '09:42:08' },
-  {
-    type: 'success',
-    text: 'Vite dev server started at http://localhost:5173',
-    timestamp: '09:42:10',
-  },
-];
+const ConsolePanel: React.FC<ConsolePanelProps> = ({ logs, onClear, onClose }) => {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const autoScrollRef = useRef(true);
 
-const ConsolePanel: React.FC<ConsolePanelProps> = ({ logs = defaultLogs }) => {
+  const isNearBottom = useCallback(() => {
+    const el = contentRef.current;
+    if (!el) return true;
+    const threshold = 30;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+  }, []);
+
+  const handleScroll = useCallback(() => {
+    autoScrollRef.current = isNearBottom();
+  }, [isNearBottom]);
+
+  useEffect(() => {
+    if (autoScrollRef.current && contentRef.current) {
+      contentRef.current.scrollTop = contentRef.current.scrollHeight;
+    }
+  }, [logs]);
+
+  const handleClose = useCallback(() => {
+    setIsCollapsed(true);
+    onClose?.();
+  }, [onClose]);
+
+  const handleExpand = useCallback(() => {
+    setIsCollapsed(false);
+  }, []);
+
+  const lastLogText = logs.length > 0 ? logs[logs.length - 1].text : 'No output yet';
+
+  if (isCollapsed) {
+    return (
+      <div
+        className="console-collapsed"
+        data-testid="console-collapsed"
+        onClick={handleExpand}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') handleExpand();
+        }}
+      >
+        <Terminal size={12} className="icon-terminal" />
+        <span className="collapsed-preview" data-testid="collapsed-preview">
+          {lastLogText}
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div className="console-panel" data-testid="console-panel">
       <div className="console-header" data-testid="console-header">
@@ -34,17 +70,22 @@ const ConsolePanel: React.FC<ConsolePanelProps> = ({ logs = defaultLogs }) => {
           <span>Output Console</span>
         </div>
         <div className="console-actions" data-testid="console-actions">
-          <button title="Clear Logs">
+          <button title="Clear Logs" onClick={onClear} data-testid="clear-button">
             <Trash2 size={14} />
           </button>
           <div className="divider-v" data-testid="divider-v"></div>
-          <button title="Close Console">
+          <button title="Close Console" onClick={handleClose} data-testid="close-button">
             <X size={14} />
           </button>
         </div>
       </div>
 
-      <div className="console-content">
+      <div
+        className="console-content"
+        ref={contentRef}
+        onScroll={handleScroll}
+        data-testid="console-content"
+      >
         {logs.map((log, i) => (
           <div
             key={i}

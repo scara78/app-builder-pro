@@ -15,6 +15,7 @@ import { filesToTree } from '../services/webcontainer/fileSystem';
 import { useSettings } from '../contexts/SettingsContext';
 import { useAIBuilder } from '../hooks/useAIBuilder';
 import { useWebContainer } from '../hooks/useWebContainer';
+import { useConsoleLogs } from '../hooks/useConsoleLogs';
 import { useBackendCreation } from '../hooks/backend/pipeline/useBackendCreation';
 import { useSupabaseOAuth } from '../hooks/backend/oauth/useSupabaseOAuth';
 import { adaptProject } from '../services/adapter';
@@ -39,9 +40,7 @@ const BuilderPageInner: React.FC<BuilderPageProps> = ({ initialPrompt }) => {
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [currentFiles, setCurrentFiles] = useState<ProjectFile[]>([]);
   const [activeFile, setActiveFile] = useState<ProjectFile | null>(null);
-  const [consoleLogs] = useState<
-    { type: 'info' | 'success' | 'warn' | 'error'; text: string; timestamp: string }[]
-  >([]);
+  const { logs: consoleLogs, addLog, clearLogs } = useConsoleLogs();
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isBackendModalOpen, setIsBackendModalOpen] = useState(false);
@@ -102,7 +101,7 @@ const BuilderPageInner: React.FC<BuilderPageProps> = ({ initialPrompt }) => {
         setMessages((prev) => [...prev, assistantMsg]);
 
         if (response.warnings && response.warnings.length > 0) {
-          response.warnings.forEach(w => showToast({ message: w, type: 'error' }));
+          response.warnings.forEach((w) => showToast({ message: w, type: 'error' }));
         }
 
         if (response.files && response.files.length > 0) {
@@ -115,10 +114,10 @@ const BuilderPageInner: React.FC<BuilderPageProps> = ({ initialPrompt }) => {
           setBuilderState('installing');
           const tree = filesToTree(response.files);
           await mount(tree);
-          await install();
+          await install(addLog);
 
           setBuilderState('running');
-          await runDev(undefined, (url) => {
+          await runDev(addLog, (url) => {
             setPreviewUrl(url);
           });
         } else {
@@ -252,8 +251,8 @@ const BuilderPageInner: React.FC<BuilderPageProps> = ({ initialPrompt }) => {
       // Remount WebContainer with adapted files
       const tree = filesToTree(adapted.files);
       await mount(tree);
-      await install();
-      await runDev(undefined, (url) => {
+      await install(addLog);
+      await runDev(addLog, (url) => {
         setPreviewUrl(url);
       });
 
@@ -328,31 +327,33 @@ const BuilderPageInner: React.FC<BuilderPageProps> = ({ initialPrompt }) => {
               </div>
             </div>
 
-              <div className="workspace-content">
-          {builderState === 'error' ? (
-            <BuildErrorPanel
-              message={lastError ? getGenericErrorMessage(lastError) : 'An unexpected error occurred.'}
-              onRetry={handleRetry}
-            />
-          ) : (
-            <>
-              {activeTab === 'preview' ? (
-                <PreviewPanel state={builderState} url={previewUrl} />
+            <div className="workspace-content">
+              {builderState === 'error' ? (
+                <BuildErrorPanel
+                  message={
+                    lastError ? getGenericErrorMessage(lastError) : 'An unexpected error occurred.'
+                  }
+                  onRetry={handleRetry}
+                />
               ) : (
-                <div className="editor-layout">
-                  {showExplorer && <FileExplorer files={currentFiles} />}
-                  <CodeEditor
-                    fileName={activeFile?.path || 'App.tsx'}
-                    code={activeFile?.content || ''}
-                    language={activeFile?.path.endsWith('.css') ? 'css' : 'typescript'}
-                  />
-                </div>
+                <>
+                  {activeTab === 'preview' ? (
+                    <PreviewPanel state={builderState} url={previewUrl} />
+                  ) : (
+                    <div className="editor-layout">
+                      {showExplorer && <FileExplorer files={currentFiles} />}
+                      <CodeEditor
+                        fileName={activeFile?.path || 'App.tsx'}
+                        code={activeFile?.content || ''}
+                        language={activeFile?.path.endsWith('.css') ? 'css' : 'typescript'}
+                      />
+                    </div>
+                  )}
+                </>
               )}
-            </>
-          )}
-        </div>
+            </div>
 
-            <ConsolePanel logs={consoleLogs} />
+            <ConsolePanel logs={consoleLogs} onClear={clearLogs} onClose={() => {}} />
           </Panel>
         </PanelGroup>
       </main>

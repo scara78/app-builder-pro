@@ -33,3 +33,11 @@ export interface AIResponse {
 }
 
 export type BuilderState = 'idle' | 'generating' | 'installing' | 'running' | 'error';
+
+export type ConsoleLogType = 'info' | 'success' | 'warn' | 'error';
+
+export interface ConsoleLog {
+  type: ConsoleLogType;
+  text: string;
+  timestamp: string; // HH:MM:SS format
+}
