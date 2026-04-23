@@ -41,6 +41,10 @@ git commit --no-verify -m "hotfix: critical bug"
 | `typecheck` | `tsc --noEmit` | Type checking |
 | `test` | `vitest` | Watch mode tests |
 | `test:run` | `vitest run` | CI-mode tests |
+| `lint` | `eslint .` | Lint all files |
+| `lint:fix` | `eslint . --fix` | Lint and auto-fix |
+| `format` | `prettier --write "src/**/*.{ts,tsx,css}"` | Format source files |
+| `format:check` | `prettier --check "src/**/*.{ts,tsx,css}"` | Check formatting |
 | `dev` | `vite` | Development server |
 | `build` | `tsc && vite build` | Production build |
 
@@ -59,6 +63,10 @@ npm run test:run -- --coverage
 
 ## Notes
 
-- ESLint is NOT configured yet (deferred to Phase 6)
+- ESLint IS configured — run `npm run lint` to check, `npm run lint:fix` to auto-fix
+- Prettier IS configured — run `npm run format` to format, `npm run format:check` to verify
+- `@testing-library/user-event` is available for user interaction simulation (prefer over `fireEvent`)
+- Coverage thresholds are enforced in `vitest.config.ts`: 80% statements, 70% branches, 70% functions
+- CI runs tests with coverage on both push and pull requests to main
 - DOMPurify types were added to fix TypeScript errors
 - All tests must pass before committing

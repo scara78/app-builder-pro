@@ -1,6 +1,6 @@
-import { defineConfig } from 'vitest/config'
-import react from '@vitejs/plugin-react'
-import path from 'path'
+import { defineConfig } from 'vitest/config';
+import react from '@vitejs/plugin-react';
+import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
@@ -25,15 +25,21 @@ export default defineConfig({
         // Exclude files that cause Windows path issues with special characters
         '**/__mocks__/**',
         '**/__fixtures__/**',
-        'src/vite-env.d.ts'
+        'src/vite-env.d.ts',
       ],
       // Clean coverage output directory before each run
-      clean: true
-    }
+      clean: true,
+      // Coverage thresholds — CI fails when any metric drops below minimum
+      thresholds: {
+        statements: 80,
+        branches: 70,
+        functions: 70,
+      },
+    },
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src')
-    }
-  }
-})
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+});
