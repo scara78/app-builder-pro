@@ -65,9 +65,25 @@ vi.mock('../components/editor/CodeEditor', () => ({
 }));
 
 vi.mock('../components/editor/FileExplorer', () => ({
-  default: ({ files }: any) => (
+  default: ({ files, onFileSelect, selectedPath, onNewItem }: any) => (
     <div data-testid="file-explorer">
       <span data-testid="file-count">{files?.length || 0}</span>
+      <span data-testid="selected-path">{selectedPath ?? ''}</span>
+      {files?.map((f: any) => (
+        <button
+          key={f.path}
+          data-testid={`file-click-${f.path}`}
+          onClick={() => onFileSelect?.(f.path, f.content ?? '')}
+        >
+          {f.path}
+        </button>
+      ))}
+      <button
+        data-testid="trigger-on-new-item"
+        onClick={() => onNewItem?.({ parentPath: '/', name: 'new-file.ts', type: 'file' })}
+      >
+        Trigger onNewItem
+      </button>
     </div>
   ),
 }));
@@ -1587,6 +1603,162 @@ describe('BuilderPage', () => {
         expect(mockShowToast).toHaveBeenCalledWith(
           expect.objectContaining({
             type: 'success',
+          })
+        );
+      });
+    });
+  });
+
+  // ===== Phase 5: FileExplorer integration wiring (FCREAT-005) =====
+
+  describe('FileExplorer integration', () => {
+    it('clicking a file in FileExplorer sets activeFile and opens in CodeEditor', async () => {
+      // Given - BuilderPage with files in the file tree
+      const initialPrompt = '';
+      const mockFiles = [
+        { path: 'src/App.tsx', content: 'const App = () => <div>Hello</div>' },
+        { path: 'src/index.ts', content: 'console.log("hi")' },
+      ];
+
+      vi.spyOn(useFileTreeModule, 'useFileTree').mockReturnValue({
+        files: mockFiles,
+        isLoading: false,
+        error: null,
+        refresh: vi.fn().mockResolvedValue(undefined),
+        createFile: vi.fn().mockResolvedValue('new-file.ts'),
+        createFolder: vi.fn().mockResolvedValue('new-folder'),
+      } as any);
+
+      // Switch to code tab to see the editor
+      render(<BuilderPage initialPrompt={initialPrompt} />);
+      const codeTab = screen.getByText('Code');
+      fireEvent.click(codeTab);
+
+      // When - click a file in FileExplorer
+      const fileButton = screen.getByTestId('file-click-src/index.ts');
+      fireEvent.click(fileButton);
+
+      // Then - CodeEditor should display the file's content
+      await waitFor(() => {
+        expect(screen.getByTestId('code-content').textContent).toBe('console.log("hi")');
+        expect(screen.getByTestId('file-name').textContent).toBe('src/index.ts');
+      });
+    });
+
+    it('creating a new file auto-selects it in CodeEditor', async () => {
+      // Given - BuilderPage with file tree that has createFile method
+      const initialPrompt = '';
+      const newFilePath = 'new-file.ts';
+
+      const mockCreateFile = vi.fn().mockResolvedValue(newFilePath);
+
+      // Start with existing files + the new file (simulating post-creation tree)
+      const filesAfterCreation = [
+        { path: 'src/App.tsx', content: 'const App = () => <div>Hello</div>' },
+        { path: newFilePath, content: '' },
+      ];
+
+      vi.spyOn(useFileTreeModule, 'useFileTree').mockReturnValue({
+        files: filesAfterCreation,
+        isLoading: false,
+        error: null,
+        refresh: vi.fn().mockResolvedValue(undefined),
+        createFile: mockCreateFile,
+        createFolder: vi.fn().mockResolvedValue('new-folder'),
+      } as any);
+
+      render(<BuilderPage initialPrompt={initialPrompt} />);
+
+      // Switch to code tab to see the editor
+      fireEvent.click(screen.getByText('Code'));
+
+      // When - trigger onNewItem (simulating creating a new file)
+      const triggerButton = screen.getByTestId('trigger-on-new-item');
+      await act(async () => {
+        fireEvent.click(triggerButton);
+      });
+
+      // Then - createFile should have been called with the correct full path
+      await waitFor(() => {
+        expect(mockCreateFile).toHaveBeenCalledWith(newFilePath);
+      });
+
+      // After creation, newlyCreatedPath is set; the useEffect watching fileTree.files
+      // should find the new file and set it as activeFile
+      await waitFor(() => {
+        expect(screen.getByTestId('file-name').textContent).toBe(newFilePath);
+      });
+    });
+
+    it('selectedPath is passed to FileExplorer after file click', async () => {
+      // Given - BuilderPage with files in the file tree
+      const initialPrompt = '';
+      const mockFiles = [
+        { path: 'src/App.tsx', content: 'const App = () => <div>Hello</div>' },
+        { path: 'src/utils.ts', content: 'export const id = (x: any) => x' },
+      ];
+
+      vi.spyOn(useFileTreeModule, 'useFileTree').mockReturnValue({
+        files: mockFiles,
+        isLoading: false,
+        error: null,
+        refresh: vi.fn().mockResolvedValue(undefined),
+        createFile: vi.fn().mockResolvedValue('new-file.ts'),
+        createFolder: vi.fn().mockResolvedValue('new-folder'),
+      } as any);
+
+      render(<BuilderPage initialPrompt={initialPrompt} />);
+      fireEvent.click(screen.getByText('Code'));
+
+      // When - click src/utils.ts in FileExplorer
+      const fileButton = screen.getByTestId('file-click-src/utils.ts');
+      fireEvent.click(fileButton);
+
+      // Then - selectedPath should be reflected in the FileExplorer mock
+      await waitFor(() => {
+        expect(screen.getByTestId('selected-path').textContent).toBe('src/utils.ts');
+      });
+    });
+
+    it('creation error toast includes the error message', async () => {
+      // Given - createFile will reject with a specific error
+      const initialPrompt = '';
+      const existingFiles = [
+        { path: 'src/App.tsx', content: 'const App = () => <div>Hello</div>' },
+      ];
+
+      const mockCreateFile = vi.fn().mockRejectedValue(new Error('Permission denied'));
+
+      vi.spyOn(useFileTreeModule, 'useFileTree').mockReturnValue({
+        files: existingFiles,
+        isLoading: false,
+        error: null,
+        refresh: vi.fn().mockResolvedValue(undefined),
+        createFile: mockCreateFile,
+        createFolder: vi.fn().mockResolvedValue('new-folder'),
+      } as any);
+
+      render(<BuilderPage initialPrompt={initialPrompt} />);
+      fireEvent.click(screen.getByText('Code'));
+
+      // When - trigger onNewItem which will cause createFile to reject
+      const triggerButton = screen.getByTestId('trigger-on-new-item');
+      await act(async () => {
+        fireEvent.click(triggerButton);
+      });
+
+      // Then - error toast should include both the prefix and the specific error
+      await waitFor(() => {
+        expect(mockShowToast).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'error',
+            message: expect.stringContaining('Failed to create file'),
+          })
+        );
+        expect(mockShowToast).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'error',
+            message: expect.stringContaining('Permission denied'),
           })
         );
       });

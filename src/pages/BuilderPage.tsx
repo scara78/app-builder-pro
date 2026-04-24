@@ -41,8 +41,10 @@ const BuilderPageInner: React.FC<BuilderPageProps> = ({ initialPrompt }) => {
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [currentFiles, setCurrentFiles] = useState<ProjectFile[]>([]);
   const [activeFile, setActiveFile] = useState<ProjectFile | null>(null);
+  const [newlyCreatedPath, setNewlyCreatedPath] = useState<string | null>(null);
   const { logs: consoleLogs, addLog, clearLogs } = useConsoleLogs();
   const fileTree = useFileTree();
+  const { showToast } = useToast();
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isBackendModalOpen, setIsBackendModalOpen] = useState(false);
@@ -51,7 +53,6 @@ const BuilderPageInner: React.FC<BuilderPageProps> = ({ initialPrompt }) => {
   const [_applyError, setApplyError] = useState<string | null>(null);
   const [lastError, setLastError] = useState<unknown>(null);
   const { getEffectiveApiKey, modelId } = useSettings();
-  const { showToast } = useToast();
 
   const { generate } = useAIBuilder();
   const { mount, install, runDev } = useWebContainer();
@@ -149,6 +150,42 @@ const BuilderPageInner: React.FC<BuilderPageProps> = ({ initialPrompt }) => {
     setBuilderState('idle');
     setLastError(null);
   }, []);
+
+  // Handler for file selection from FileExplorer (FCREAT-005)
+  const handleFileSelect = useCallback((path: string, content: string) => {
+    setActiveFile({ path, content });
+  }, []);
+
+  // Handler for creating new file/folder from FileExplorer (FCREAT-005)
+  const handleNewItem = useCallback(
+    async (item: { parentPath: string; name: string; type: 'file' | 'folder' }) => {
+      const fullPath = item.parentPath === '/' ? item.name : `${item.parentPath}/${item.name}`;
+      try {
+        if (item.type === 'file') {
+          await fileTree.createFile(fullPath);
+          setNewlyCreatedPath(fullPath);
+        } else {
+          await fileTree.createFolder(fullPath);
+        }
+      } catch (error) {
+        showToast({
+          message: `Failed to create ${item.type}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          type: 'error',
+        });
+      }
+    },
+    [fileTree, showToast]
+  );
+
+  // Auto-select newly created file after tree refresh (FCREAT-005)
+  useEffect(() => {
+    if (!newlyCreatedPath) return;
+    const found = fileTree.files.find((f) => f.path === newlyCreatedPath);
+    if (found) {
+      setActiveFile(found);
+      setNewlyCreatedPath(null);
+    }
+  }, [newlyCreatedPath, fileTree.files]);
 
   // Initialize build with prompt - only once
   useEffect(() => {
@@ -370,6 +407,9 @@ const BuilderPageInner: React.FC<BuilderPageProps> = ({ initialPrompt }) => {
                           isLoading={fileTree.isLoading}
                           error={fileTree.error}
                           onRefresh={fileTree.refresh}
+                          onFileSelect={handleFileSelect}
+                          selectedPath={activeFile?.path}
+                          onNewItem={handleNewItem}
                         />
                       )}
                       <CodeEditor

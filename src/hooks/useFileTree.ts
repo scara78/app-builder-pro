@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { WebContainerManager } from '../services/webcontainer/WebContainerManager';
+import { logWarnSafe } from '../utils/logger';
 import type { IFSWatcher } from '@webcontainer/api';
 import type { ProjectFile } from '../types';
 
@@ -11,6 +12,8 @@ export interface UseFileTreeReturn {
   isLoading: boolean;
   error: Error | null;
   refresh: () => Promise<void>;
+  createFile: (fullPath: string) => Promise<string>;
+  createFolder: (fullPath: string) => Promise<string>;
 }
 
 export function useFileTree(): UseFileTreeReturn {
@@ -21,6 +24,7 @@ export function useFileTree(): UseFileTreeReturn {
   const watcherRef = useRef<IFSWatcher | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wcmRef = useRef<WebContainerManager | null>(null);
+  const creatingPathRef = useRef<string | null>(null);
 
   const loadFiles = useCallback(async () => {
     try {
@@ -93,5 +97,119 @@ export function useFileTree(): UseFileTreeReturn {
     await loadFiles();
   }, [loadFiles]);
 
-  return { files, isLoading, error, refresh };
+  /**
+   * Validate a path for creation: reject empty, whitespace-only, trailing slash,
+   * double slashes, dot-only segments, or if the path already exists in the file tree.
+   */
+  const validateCreationPath = useCallback(
+    (fullPath: string, existingFiles: ProjectFile[]): void => {
+      // Reject empty or whitespace-only
+      if (!fullPath || !fullPath.trim()) {
+        throw new Error('Name cannot be empty');
+      }
+
+      // Reject trailing slash (means empty leaf name)
+      if (fullPath.endsWith('/')) {
+        throw new Error('Name cannot end with "/"');
+      }
+
+      // Reject double slashes (means empty path segment)
+      if (fullPath.includes('//')) {
+        throw new Error('Path cannot contain empty segments ("//")');
+      }
+
+      // Extract leaf name (last segment after last /)
+      const lastSlashIndex = fullPath.lastIndexOf('/');
+      const leafName = lastSlashIndex >= 0 ? fullPath.slice(lastSlashIndex + 1) : fullPath;
+
+      // Reject if leaf name contains a slash (shouldn't happen after extraction, but guard
+      // against input like "foo/bar" where the entire input is treated as a leaf name)
+      if (leafName.includes('/')) {
+        throw new Error('Name cannot contain "/"');
+      }
+
+      // Reject dot-only leaf names ("." or "..")
+      if (leafName === '.' || leafName === '..') {
+        throw new Error('Name cannot be "." or ".."');
+      }
+
+      // Reject if the full path already exists
+      const exists = existingFiles.some((f) => f.path === fullPath);
+      if (exists) {
+        throw new Error(`"${fullPath}" already exists`);
+      }
+    },
+    []
+  );
+
+  const createFile = useCallback(
+    async (fullPath: string): Promise<string> => {
+      // Validate
+      validateCreationPath(fullPath, files);
+
+      const wcm = wcmRef.current;
+      if (!wcm) {
+        throw new Error('WebContainer is not ready');
+      }
+
+      creatingPathRef.current = fullPath;
+
+      try {
+        // Extract parent directory from fullPath
+        const lastSlashIndex = fullPath.lastIndexOf('/');
+        const parentDir = lastSlashIndex > 0 ? fullPath.slice(0, lastSlashIndex) : null;
+
+        // Create parent directories if needed
+        if (parentDir) {
+          await wcm.mkdir(parentDir, { recursive: true });
+        }
+
+        // Write empty file
+        await wcm.writeFile(fullPath, '');
+
+        return fullPath;
+      } catch (err) {
+        logWarnSafe(
+          'useFileTree',
+          `Failed to create file "${fullPath}": ${(err as Error).message}`
+        );
+        setError(err as Error);
+        throw err;
+      } finally {
+        creatingPathRef.current = null;
+      }
+    },
+    [files, validateCreationPath]
+  );
+
+  const createFolder = useCallback(
+    async (fullPath: string): Promise<string> => {
+      // Validate
+      validateCreationPath(fullPath, files);
+
+      const wcm = wcmRef.current;
+      if (!wcm) {
+        throw new Error('WebContainer is not ready');
+      }
+
+      creatingPathRef.current = fullPath;
+
+      try {
+        await wcm.mkdir(fullPath, { recursive: true });
+        return fullPath;
+      } catch (err) {
+        logWarnSafe(
+          'useFileTree',
+          `Failed to create folder "${fullPath}": ${(err as Error).message}`
+        );
+        setError(err as Error);
+        throw err;
+      } finally {
+        creatingPathRef.current = null;
+      }
+    },
+    [files, validateCreationPath]
+  );
+
+  return { files, isLoading, error, refresh, createFile, createFolder };
 }

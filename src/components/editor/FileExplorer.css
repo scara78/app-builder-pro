@@ -74,6 +74,13 @@
   padding-left: 14px;
 }
 
+.item-row.file-item--selected {
+  background: rgba(255, 255, 255, 0.1);
+  border-left: 2px solid var(--accent-primary, #3b82f6);
+  padding-left: 12px;
+  color: var(--text-primary);
+}
+
 .retry-button {
   margin-left: 8px;
   background: none;
@@ -90,6 +97,49 @@
 
 .retry-button:hover {
   border-color: var(--text-primary);
+}
+
+/* Inline creation input */
+.creating-input {
+  background: var(--bg-secondary, #1e1e1e);
+  border: 1px solid var(--accent-primary, #3b82f6);
+  border-radius: 3px;
+  color: var(--text-primary, #e0e0e0);
+  font-size: 0.85rem;
+  padding: 2px 6px;
+  outline: none;
+  width: 100%;
+  max-width: 140px;
+}
+
+.creating-input::placeholder {
+  color: var(--text-muted, #888);
+  font-style: italic;
+}
+
+/* Context menu */
+.context-menu {
+  position: fixed;
+  background: var(--bg-secondary, #252526);
+  border: 1px solid var(--border, #444);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+  min-width: 140px;
+  padding: 4px 0;
+}
+
+.context-menu-item {
+  padding: 6px 16px;
+  font-size: 0.85rem;
+  color: var(--text-secondary, #ccc);
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.context-menu-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary, #e0e0e0);
 }
 
 .spin {

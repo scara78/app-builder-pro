@@ -371,6 +371,80 @@ describe('WebContainerManager', () => {
     });
   });
 
+  describe('mkdir', () => {
+    it('creates directory successfully', async () => {
+      // Given
+      const manager = await WebContainerManager.getInstance();
+
+      // When
+      await manager.mkdir('/src/new-folder');
+
+      // Then — no options passed, so only dirPath argument
+      expect(mockContainer.fs.mkdir).toHaveBeenCalledWith('/src/new-folder');
+    });
+
+    it('creates directory with recursive option', async () => {
+      // Given
+      const manager = await WebContainerManager.getInstance();
+
+      // When
+      await manager.mkdir('/src/a/b/c', { recursive: true });
+
+      // Then
+      expect(mockContainer.fs.mkdir).toHaveBeenCalledWith('/src/a/b/c', { recursive: true });
+    });
+
+    it('throws when not booted', async () => {
+      // Given — create a fresh WCM without booting
+      const manager = new (WebContainerManager as any)();
+
+      // When & Then
+      await expect(manager.mkdir('/any/path')).rejects.toThrow('WebContainer is not booted');
+    });
+
+    it('sets _isWriting flag to true during execution', async () => {
+      // Given — mock fs.mkdir to capture flag state during execution
+      let flagDuringMkdir: boolean | undefined;
+      mockContainer.fs.mkdir.mockImplementationOnce(async () => {
+        const manager = await WebContainerManager.getInstance();
+        flagDuringMkdir = (manager as any)._isWriting;
+      });
+      const manager = await WebContainerManager.getInstance();
+
+      // When
+      await manager.mkdir('/new-dir', { recursive: true });
+
+      // Then — _isWriting was true while fs.mkdir was running
+      expect(flagDuringMkdir).toBe(true);
+    });
+
+    it('clears _isWriting flag after mkdir completes', async () => {
+      // Given
+      const manager = await WebContainerManager.getInstance();
+
+      // When
+      await manager.mkdir('/new-dir', { recursive: true });
+
+      // Then — _isWriting is false after completion
+      expect((manager as any)._isWriting).toBe(false);
+    });
+
+    it('clears _isWriting flag after mkdir fails', async () => {
+      // Given — mock fs.mkdir to reject
+      mockContainer.fs.mkdir.mockRejectedValueOnce(new Error('Mkdir failed'));
+      const manager = await WebContainerManager.getInstance();
+
+      // When — call mkdir (it throws)
+      await expect(manager.mkdir('/invalid')).rejects.toThrow('Mkdir failed');
+
+      // Then — _isWriting is still false even after failure
+      expect((manager as any)._isWriting).toBe(false);
+
+      // Reset
+      mockContainer.fs.mkdir.mockResolvedValue(undefined);
+    });
+  });
+
   describe('error handling', () => {
     it('throws when boot fails', async () => {
       // Given

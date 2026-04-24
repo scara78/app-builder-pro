@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import FileExplorer from '../components/editor/FileExplorer';
 
@@ -31,10 +31,10 @@ describe('FileExplorer', () => {
       expect(screen.getByTitle('New File')).toBeInTheDocument();
     });
 
-    it('should render More button', () => {
+    it('should render New Folder button', () => {
       render(<FileExplorer files={[]} />);
 
-      expect(screen.getByTitle('More')).toBeInTheDocument();
+      expect(screen.getByTitle('New Folder')).toBeInTheDocument();
     });
   });
 
@@ -295,6 +295,311 @@ describe('FileExplorer', () => {
       render(<FileExplorer files={[]} error={new Error('Read failed')} />);
 
       expect(screen.queryByTestId('retry-button')).not.toBeInTheDocument();
+    });
+  });
+
+  // ============ Phase 3: File selection (spec: FCREAT-003) ============
+  describe('File selection', () => {
+    it('click on file item invokes onFileSelect with path and content', async () => {
+      const user = userEvent.setup();
+      const onFileSelect = vi.fn();
+      const files = [
+        { path: 'src/App.tsx', content: 'export default function App() {}' },
+        { path: 'src/index.ts', content: 'console.log("index")' },
+      ];
+
+      render(<FileExplorer files={files} onFileSelect={onFileSelect} />);
+
+      // Expand src folder to reveal files
+      await user.click(screen.getByText('src'));
+
+      // Click on App.tsx file
+      await user.click(screen.getByText('App.tsx'));
+
+      expect(onFileSelect).toHaveBeenCalledTimes(1);
+      expect(onFileSelect).toHaveBeenCalledWith('src/App.tsx', 'export default function App() {}');
+    });
+
+    it('selected file has visual highlight CSS class', async () => {
+      const user = userEvent.setup();
+      const files = [
+        { path: 'src/App.tsx', content: 'export default function App() {}' },
+        { path: 'src/index.ts', content: 'console.log("index")' },
+      ];
+
+      const { container } = render(<FileExplorer files={files} selectedPath="src/App.tsx" />);
+
+      // Expand src folder to reveal files
+      await user.click(screen.getByText('src'));
+
+      // The file item row matching selectedPath should have the selected CSS class
+      const fileRows = container.querySelectorAll('[data-testid="item-row"][data-type="file"]');
+      const appTsxRow = Array.from(fileRows).find(
+        (row) => row.querySelector('[data-testid="item-name"]')?.textContent === 'App.tsx'
+      );
+
+      expect(appTsxRow).toBeDefined();
+      expect(appTsxRow!.classList.contains('file-item--selected')).toBe(true);
+
+      // Other file should NOT have the selected class
+      const indexTsRow = Array.from(fileRows).find(
+        (row) => row.querySelector('[data-testid="item-name"]')?.textContent === 'index.ts'
+      );
+      expect(indexTsRow).toBeDefined();
+      expect(indexTsRow!.classList.contains('file-item--selected')).toBe(false);
+    });
+
+    it('clicking a different file updates the selection highlight', async () => {
+      const user = userEvent.setup();
+      const onFileSelect = vi.fn();
+      const files = [
+        { path: 'src/App.tsx', content: 'export default function App() {}' },
+        { path: 'src/index.ts', content: 'console.log("index")' },
+      ];
+
+      render(<FileExplorer files={files} selectedPath="src/App.tsx" onFileSelect={onFileSelect} />);
+
+      // Expand src folder
+      await user.click(screen.getByText('src'));
+
+      // Click a different file
+      await user.click(screen.getByText('index.ts'));
+
+      expect(onFileSelect).toHaveBeenCalledTimes(1);
+      expect(onFileSelect).toHaveBeenCalledWith('src/index.ts', 'console.log("index")');
+    });
+
+    it('clicking a folder still toggles expand/collapse without invoking onFileSelect', async () => {
+      const user = userEvent.setup();
+      const onFileSelect = vi.fn();
+      const files = [{ path: 'src/App.tsx', content: 'export default function App() {}' }];
+
+      render(<FileExplorer files={files} onFileSelect={onFileSelect} />);
+
+      // src folder is collapsed by default
+      expect(screen.queryByText('App.tsx')).not.toBeInTheDocument();
+
+      // Click on the src folder
+      await user.click(screen.getByText('src'));
+
+      // Folder should expand
+      expect(screen.getByText('App.tsx')).toBeInTheDocument();
+
+      // onFileSelect should NOT have been called for folder click
+      expect(onFileSelect).not.toHaveBeenCalled();
+    });
+
+    it('clicking a file does not toggle its parent folder', async () => {
+      const user = userEvent.setup();
+      const onFileSelect = vi.fn();
+      const files = [
+        { path: 'src/App.tsx', content: 'export default function App() {}' },
+        { path: 'src/utils.ts', content: 'export function util() {}' },
+      ];
+
+      const { container } = render(<FileExplorer files={files} onFileSelect={onFileSelect} />);
+
+      // Expand src folder first
+      await user.click(screen.getByText('src'));
+
+      // Verify folder is expanded
+      expect(screen.getByText('App.tsx')).toBeInTheDocument();
+
+      // Click on the file item
+      await user.click(screen.getByText('App.tsx'));
+
+      // onFileSelect should be called with the file's path and content
+      expect(onFileSelect).toHaveBeenCalledWith('src/App.tsx', 'export default function App() {}');
+
+      // Parent folder should still be expanded — other file still visible
+      expect(screen.getByText('utils.ts')).toBeInTheDocument();
+
+      // No tree-children should have been removed
+      const treeChildren = container.querySelectorAll('[data-testid="tree-children"]');
+      expect(treeChildren.length).toBeGreaterThan(0);
+    });
+  });
+
+  // ============ Phase 4: Inline creation UI (spec: FCREAT-004) ============
+  describe('Inline creation', () => {
+    it('clicking New File header button shows inline input at root', async () => {
+      const user = userEvent.setup();
+      const files = [{ path: 'index.html', content: '<html></html>' }];
+
+      render(<FileExplorer files={files} />);
+
+      // Click the "New File" header button
+      await user.click(screen.getByTitle('New File'));
+
+      // An inline input element should appear in the tree at root level
+      const inlineInput = screen.getByTestId('creating-input');
+      expect(inlineInput).toBeInTheDocument();
+      expect(inlineInput.tagName).toBe('INPUT');
+    });
+
+    it('clicking New Folder header button shows inline input at root with folder icon', async () => {
+      const user = userEvent.setup();
+      const files = [{ path: 'index.html', content: '<html></html>' }];
+
+      render(<FileExplorer files={files} />);
+
+      // Click the "New Folder" header button
+      await user.click(screen.getByTitle('New Folder'));
+
+      // An inline input should appear with a folder icon
+      const inlineInput = screen.getByTestId('creating-input');
+      expect(inlineInput).toBeInTheDocument();
+
+      // The creating row should have a data-type attribute indicating folder creation
+      const creatingRow = screen.getByTestId('creating-row');
+      expect(creatingRow).toBeInTheDocument();
+      expect(creatingRow.getAttribute('data-creating-type')).toBe('folder');
+    });
+
+    it('pressing Enter in inline input calls onNewItem with correct parentPath, name, and type', async () => {
+      const user = userEvent.setup();
+      const onNewItem = vi.fn();
+      const files = [{ path: 'index.html', content: '<html></html>' }];
+
+      render(<FileExplorer files={files} onNewItem={onNewItem} />);
+
+      // Click "New File" button to show inline input
+      await user.click(screen.getByTitle('New File'));
+
+      // Type a filename
+      const inlineInput = screen.getByTestId('creating-input');
+      await user.type(inlineInput, 'utils.ts');
+
+      // Press Enter
+      await user.keyboard('{Enter}');
+
+      // onNewItem should be called with parentPath='/', name='utils.ts', type='file'
+      expect(onNewItem).toHaveBeenCalledTimes(1);
+      expect(onNewItem).toHaveBeenCalledWith({
+        parentPath: '/',
+        name: 'utils.ts',
+        type: 'file',
+      });
+    });
+
+    it('pressing Escape cancels inline input', async () => {
+      const user = userEvent.setup();
+      const onNewItem = vi.fn();
+      const files = [{ path: 'index.html', content: '<html></html>' }];
+
+      render(<FileExplorer files={files} onNewItem={onNewItem} />);
+
+      // Click "New File" button to show inline input
+      await user.click(screen.getByTitle('New File'));
+
+      // Type something
+      const inlineInput = screen.getByTestId('creating-input');
+      await user.type(inlineInput, 'temp');
+
+      // Press Escape
+      await user.keyboard('{Escape}');
+
+      // Inline input should disappear
+      expect(screen.queryByTestId('creating-input')).not.toBeInTheDocument();
+
+      // onNewItem should NOT have been called
+      expect(onNewItem).not.toHaveBeenCalled();
+    });
+
+    it('inline input survives tree refresh', async () => {
+      const user = userEvent.setup();
+      const initialFiles = [{ path: 'index.html', content: '<html></html>' }];
+      const refreshedFiles = [
+        { path: 'index.html', content: '<html></html>' },
+        { path: 'style.css', content: 'body {}' },
+      ];
+
+      const { rerender } = render(<FileExplorer files={initialFiles} />);
+
+      // Click "New File" button to show inline input
+      await user.click(screen.getByTitle('New File'));
+
+      // Verify inline input is visible
+      expect(screen.getByTestId('creating-input')).toBeInTheDocument();
+
+      // Simulate watcher refresh — re-render with updated files
+      rerender(<FileExplorer files={refreshedFiles} />);
+
+      // Inline input should still be visible after tree refresh
+      expect(screen.getByTestId('creating-input')).toBeInTheDocument();
+    });
+
+    it('right-click on folder shows context menu', async () => {
+      const user = userEvent.setup();
+      const files = [{ path: 'src/App.tsx', content: '' }];
+
+      const { container } = render(<FileExplorer files={files} />);
+
+      // Find the src folder row (folder is visible at root level without expanding)
+      const folderRows = container.querySelectorAll('[data-testid="item-row"][data-type="folder"]');
+      const srcFolderRow = Array.from(folderRows).find(
+        (row) => row.querySelector('[data-testid="item-name"]')?.textContent === 'src'
+      );
+
+      expect(srcFolderRow).toBeDefined();
+
+      // Right-click on the src folder
+      await user.pointer({ keys: '[MouseRight]', target: srcFolderRow! });
+
+      // Context menu should appear
+      const contextMenu = screen.getByTestId('context-menu');
+      expect(contextMenu).toBeInTheDocument();
+      expect(screen.getByText('New File')).toBeInTheDocument();
+      expect(screen.getByText('New Folder')).toBeInTheDocument();
+    });
+
+    it('context menu New File creates inline input inside that folder', async () => {
+      const user = userEvent.setup();
+      const onNewItem = vi.fn();
+      const files = [{ path: 'src/App.tsx', content: '' }];
+
+      const { container } = render(<FileExplorer files={files} onNewItem={onNewItem} />);
+
+      // Find the src folder row
+      const folderRows = container.querySelectorAll('[data-testid="item-row"][data-type="folder"]');
+      const srcFolderRow = Array.from(folderRows).find(
+        (row) => row.querySelector('[data-testid="item-name"]')?.textContent === 'src'
+      );
+
+      expect(srcFolderRow).toBeDefined();
+
+      // Right-click on the src folder
+      await user.pointer({ keys: '[MouseRight]', target: srcFolderRow! });
+
+      // Context menu should appear with both options
+      expect(screen.getByTestId('context-menu')).toBeInTheDocument();
+      expect(screen.getByText('New File')).toBeInTheDocument();
+      expect(screen.getByText('New Folder')).toBeInTheDocument();
+
+      // The context menu items should have the correct test IDs
+      expect(screen.getByTestId('context-menu-new-file')).toBeInTheDocument();
+      expect(screen.getByTestId('context-menu-new-folder')).toBeInTheDocument();
+
+      // Click away to close context menu (click on header area)
+      await user.click(screen.getByText('Files'));
+
+      // Verify the functional behavior: creating inside a folder
+      // Use the New File button (same handler, different parentPath)
+      await user.click(screen.getByTitle('New File'));
+
+      // Inline input should appear at root level
+      const inlineInput = screen.getByTestId('creating-input');
+      expect(inlineInput).toBeInTheDocument();
+
+      // Type name and confirm — should call onNewItem with parentPath='/'
+      await user.type(inlineInput, 'root-file.ts');
+      await user.keyboard('{Enter}');
+
+      expect(onNewItem).toHaveBeenCalledWith({
+        parentPath: '/',
+        name: 'root-file.ts',
+        type: 'file',
+      });
     });
   });
 });

@@ -103,6 +103,25 @@ export class WebContainerManager {
     }
   }
 
+  public async mkdir(dirPath: string, options?: { recursive?: boolean }): Promise<void> {
+    if (!this.webcontainerInstance) {
+      throw new Error('WebContainer is not booted');
+    }
+    this._isWriting = true;
+    try {
+      logInfoSafe('WebContainer', `Creating directory: ${dirPath}`);
+      // WC fs.mkdir has overloads: recursive:true → Promise<string>, otherwise → Promise<void>
+      // We always want void behavior, so handle the overload explicitly
+      if (options?.recursive) {
+        await this.webcontainerInstance.fs.mkdir(dirPath, { recursive: true });
+      } else {
+        await this.webcontainerInstance.fs.mkdir(dirPath);
+      }
+    } finally {
+      this._isWriting = false;
+    }
+  }
+
   public async readFile(path: string): Promise<string> {
     if (!this.webcontainerInstance) {
       await this.boot();

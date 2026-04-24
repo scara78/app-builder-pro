@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Folder,
   File,
   ChevronRight,
   ChevronDown,
   Plus,
-  MoreVertical,
+  FolderPlus,
   Loader2,
   AlertCircle,
   RefreshCw,
 } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import { type ProjectFile } from '../../types';
 import './FileExplorer.css';
 
@@ -18,17 +19,25 @@ interface FileExplorerProps {
   isLoading?: boolean;
   error?: Error | null;
   onRefresh?: () => void;
+  onFileSelect?: (path: string, content: string) => void;
+  selectedPath?: string;
+  onNewItem?: (item: { parentPath: string; name: string; type: 'file' | 'folder' }) => void;
 }
 
 interface TreeNode {
   name: string;
-  type: 'folder' | 'file';
+  type: 'folder' | 'file' | 'creating';
   children?: TreeNode[];
   path?: string;
   content?: string;
+  creatingType?: 'file' | 'folder';
 }
 
-function buildTree(files: ProjectFile[]): TreeNode[] {
+function buildTree(
+  files: ProjectFile[],
+  creatingInPath: string | null,
+  creatingType: 'file' | 'folder' | null
+): TreeNode[] {
   const root: TreeNode[] = [];
 
   files.forEach((file) => {
@@ -58,12 +67,84 @@ function buildTree(files: ProjectFile[]): TreeNode[] {
     });
   });
 
+  // Insert virtual 'creating' node if creation is active
+  if (creatingInPath !== null && creatingType !== null) {
+    const creatingNode: TreeNode = {
+      name: '',
+      type: 'creating',
+      creatingType,
+      path: creatingInPath === '/' ? '/__creating__' : creatingInPath + '/__creating__',
+    };
+
+    if (creatingInPath === '/') {
+      // Insert at root level as first child
+      root.unshift(creatingNode);
+    } else {
+      // Find the folder at creatingInPath and insert as first child
+      const findAndInsert = (nodes: TreeNode[], parentPath: string): boolean => {
+        for (const node of nodes) {
+          if (node.type === 'folder') {
+            const nodePath = node.path || node.name;
+            if (nodePath === parentPath) {
+              if (!node.children) node.children = [];
+              node.children.unshift({ ...creatingNode, path: parentPath + '/__creating__' });
+              return true;
+            }
+            if (node.children && findAndInsert(node.children, parentPath)) {
+              return true;
+            }
+          }
+        }
+        return false;
+      };
+      findAndInsert(root, creatingInPath);
+    }
+  }
+
   return root;
 }
 
-const FileExplorer: React.FC<FileExplorerProps> = ({ files = [], isLoading, error, onRefresh }) => {
+const FileExplorer: React.FC<FileExplorerProps> = ({
+  files = [],
+  isLoading,
+  error,
+  onRefresh,
+  onFileSelect,
+  selectedPath,
+  onNewItem,
+}) => {
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
-  const tree = buildTree(files);
+  const [creatingInPath, setCreatingInPath] = useState<string | null>(null);
+  const [creatingType, setCreatingType] = useState<'file' | 'folder' | null>(null);
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    folderPath: string;
+  } | null>(null);
+  const [creatingValue, setCreatingValue] = useState('');
+  const creatingInputRef = useRef<HTMLInputElement>(null);
+  const contextMenuRef = useRef<HTMLDivElement>(null);
+
+  const tree = buildTree(files, creatingInPath, creatingType);
+
+  // Auto-focus the creating input when it appears
+  useEffect(() => {
+    if (creatingInPath !== null && creatingInputRef.current) {
+      creatingInputRef.current.focus();
+    }
+  }, [creatingInPath]);
+
+  // Close context menu on click outside
+  useEffect(() => {
+    if (!contextMenu) return;
+    const handleClick = (e: MouseEvent) => {
+      // Don't close if clicking inside the context menu
+      if (contextMenuRef.current && contextMenuRef.current.contains(e.target as Node)) return;
+      setContextMenu(null);
+    };
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, [contextMenu]);
 
   const toggleFolder = (path: string) => {
     setExpandedPaths((prev) => {
@@ -77,6 +158,46 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ files = [], isLoading, erro
     });
   };
 
+  const handleStartCreating = (parentPath: string, type: 'file' | 'folder') => {
+    setCreatingInPath(parentPath);
+    setCreatingType(type);
+    setCreatingValue('');
+
+    // If creating inside a folder, auto-expand it
+    if (parentPath !== '/') {
+      setExpandedPaths((prev) => {
+        const next = new Set(prev);
+        next.add(parentPath);
+        return next;
+      });
+    }
+  };
+
+  const handleCreatingConfirm = () => {
+    if (creatingInPath !== null && creatingType !== null && creatingValue.trim()) {
+      onNewItem?.({
+        parentPath: creatingInPath,
+        name: creatingValue.trim(),
+        type: creatingType,
+      });
+    }
+    setCreatingInPath(null);
+    setCreatingType(null);
+    setCreatingValue('');
+  };
+
+  const handleCreatingCancel = () => {
+    setCreatingInPath(null);
+    setCreatingType(null);
+    setCreatingValue('');
+  };
+
+  const handleContextMenu = (e: React.MouseEvent, folderPath: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({ x: e.clientX, y: e.clientY, folderPath });
+  };
+
   const renderTree = (
     nodes: TreeNode[],
     depth: number = 0,
@@ -86,13 +207,61 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ files = [], isLoading, erro
       const fullPath = parentPath ? `${parentPath}/${item.name}` : item.name;
       const isExpanded = expandedPaths.has(fullPath);
 
+      // Render creating node as inline input
+      if (item.type === 'creating') {
+        return (
+          <div key="__creating__" className="tree-item">
+            <div
+              className="item-row creating"
+              data-testid="creating-row"
+              data-creating-type={item.creatingType}
+            >
+              {item.creatingType === 'folder' ? (
+                <Folder size={14} className="folder-icon" />
+              ) : (
+                <File size={14} className="file-icon" />
+              )}
+              <input
+                ref={creatingInputRef}
+                data-testid="creating-input"
+                className="creating-input"
+                value={creatingValue}
+                onChange={(e) => setCreatingValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleCreatingConfirm();
+                  } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    handleCreatingCancel();
+                  }
+                }}
+                placeholder={item.creatingType === 'folder' ? 'folder name' : 'file name'}
+              />
+            </div>
+          </div>
+        );
+      }
+
+      const isSelected = item.type === 'file' && selectedPath === fullPath;
+
       return (
         <div key={fullPath} className="tree-item">
           <div
-            className={`item-row ${item.type}`}
+            className={`item-row ${item.type}${isSelected ? ' file-item--selected' : ''}`}
             data-testid="item-row"
             data-type={item.type}
-            onClick={item.type === 'folder' ? () => toggleFolder(fullPath) : undefined}
+            data-path={fullPath}
+            onClick={
+              item.type === 'folder'
+                ? () => toggleFolder(fullPath)
+                : onFileSelect
+                  ? () => onFileSelect(fullPath, item.content ?? '')
+                  : undefined
+            }
+            onContextMenu={
+              item.type === 'folder' ? (e) => handleContextMenu(e, fullPath) : undefined
+            }
             style={item.type === 'folder' ? { cursor: 'pointer' } : undefined}
           >
             {item.type === 'folder' ? (
@@ -119,15 +288,19 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ files = [], isLoading, erro
   };
 
   return (
-    <div className="file-explorer" data-testid="file-explorer">
+    <div
+      className="file-explorer"
+      data-testid="file-explorer"
+      onContextMenu={(e) => e.preventDefault()}
+    >
       <div className="explorer-header">
         <span>Files</span>
         <div className="explorer-actions">
-          <button title="New File">
+          <button title="New File" onClick={() => handleStartCreating('/', 'file')}>
             <Plus size={14} />
           </button>
-          <button title="More">
-            <MoreVertical size={14} />
+          <button title="New Folder" onClick={() => handleStartCreating('/', 'folder')}>
+            <FolderPlus size={14} />
           </button>
         </div>
       </div>
@@ -157,6 +330,40 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ files = [], isLoading, erro
           <div className="empty-state">No files</div>
         )}
       </div>
+
+      {contextMenu &&
+        createPortal(
+          <div
+            ref={contextMenuRef}
+            className="context-menu"
+            data-testid="context-menu"
+            style={{ top: contextMenu.y, left: contextMenu.x }}
+          >
+            <div
+              className="context-menu-item"
+              data-testid="context-menu-new-file"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleStartCreating(contextMenu.folderPath, 'file');
+                setContextMenu(null);
+              }}
+            >
+              New File
+            </div>
+            <div
+              className="context-menu-item"
+              data-testid="context-menu-new-folder"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleStartCreating(contextMenu.folderPath, 'folder');
+                setContextMenu(null);
+              }}
+            >
+              New Folder
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 };
