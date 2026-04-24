@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { WebContainerManager } from '../WebContainerManager';
 import type { FileSystemTree } from '@/types';
+import type { ProjectFile } from '@/types';
 
 // ============================================
 // MOCK SETUP - vi.mock creates everything inside
@@ -33,11 +34,20 @@ const { mockContainer, mockBoot } = vi.hoisted(() => {
   };
 });
 
+// Mock for readDirRecursive — returns controlled ProjectFile[]
+const { mockReadDirRecursive } = vi.hoisted(() => ({
+  mockReadDirRecursive: vi.fn<(...args: unknown[]) => Promise<ProjectFile[]>>(),
+}));
+
 // Mock BEFORE importing WebContainerManager - hoisted to top by Vitest
 vi.mock('@webcontainer/api', () => ({
   WebContainer: {
     boot: mockBoot,
   },
+}));
+
+vi.mock('../readDirRecursive', () => ({
+  readDirRecursive: mockReadDirRecursive,
 }));
 
 // Sample file system tree for testing
@@ -47,7 +57,7 @@ const sampleFileTree: FileSystemTree = {
       contents: '<!DOCTYPE html><html><body>Hello World</body></html>',
     },
   },
-  'src': {
+  src: {
     directory: {
       'main.ts': {
         file: {
@@ -73,7 +83,7 @@ describe('WebContainerManager', () => {
   describe('getInstance', () => {
     it('returns a singleton instance', async () => {
       // Given - WebContainer is already booted by vi.mock
-      
+
       // When
       const instance1 = await WebContainerManager.getInstance();
       const instance2 = await WebContainerManager.getInstance();
@@ -167,6 +177,64 @@ describe('WebContainerManager', () => {
     });
   });
 
+  describe('readDir', () => {
+    it('delegates to readDirRecursive with booted WC fs and default path "/"', async () => {
+      // Given
+      const expectedFiles: ProjectFile[] = [
+        { path: 'src/App.tsx', content: '' },
+        { path: 'index.html', content: '' },
+      ];
+      mockReadDirRecursive.mockResolvedValue(expectedFiles);
+      const manager = await WebContainerManager.getInstance();
+
+      // When
+      const result = await manager.readDir();
+
+      // Then
+      expect(mockReadDirRecursive).toHaveBeenCalledWith(mockContainer.fs, '/');
+      expect(result).toEqual(expectedFiles);
+    });
+
+    it('delegates to readDirRecursive with custom dirPath', async () => {
+      // Given
+      const srcFiles: ProjectFile[] = [
+        { path: 'App.tsx', content: '' },
+        { path: 'index.ts', content: '' },
+      ];
+      mockReadDirRecursive.mockResolvedValue(srcFiles);
+      const manager = await WebContainerManager.getInstance();
+
+      // When
+      const result = await manager.readDir('/src');
+
+      // Then
+      expect(mockReadDirRecursive).toHaveBeenCalledWith(mockContainer.fs, '/src');
+      expect(result).toEqual(srcFiles);
+    });
+
+    it('throws "WebContainer is not booted" when webcontainerInstance is null', async () => {
+      // Given — create a fresh WCM without booting
+      const manager = new (WebContainerManager as any)();
+
+      // When & Then
+      await expect(manager.readDir('/')).rejects.toThrow('WebContainer is not booted');
+    });
+
+    it('throws error with exact message content before boot', async () => {
+      // Given — create a fresh WCM without booting
+      const manager = new (WebContainerManager as any)();
+
+      // When & Then
+      try {
+        await manager.readDir('/');
+        expect.unreachable('Should have thrown');
+      } catch (error) {
+        expect(error).toBeInstanceOf(Error);
+        expect((error as Error).message).toBe('WebContainer is not booted');
+      }
+    });
+  });
+
   describe('install', () => {
     it('runs npm install', async () => {
       // Given
@@ -231,7 +299,7 @@ describe('WebContainerManager', () => {
       const serverReadyCallback = mockContainer.on.mock.calls.find(
         (call: unknown[]) => call[0] === 'server-ready'
       )?.[1] as ((port: number, url: string) => void) | undefined;
-      
+
       if (serverReadyCallback) {
         serverReadyCallback(3000, 'http://localhost:3000');
       }
@@ -259,7 +327,7 @@ describe('WebContainerManager', () => {
 
       // When & Then
       await expect(WebContainerManager.getInstance()).rejects.toThrow('Boot failed');
-      
+
       // Reset for other tests
       mockBoot.mockResolvedValue(mockContainer);
     });
@@ -271,7 +339,7 @@ describe('WebContainerManager', () => {
 
       // When & Then
       await expect(manager.mount(sampleFileTree)).rejects.toThrow('Mount failed');
-      
+
       // Reset
       mockContainer.mount.mockResolvedValue(undefined);
     });
@@ -283,7 +351,7 @@ describe('WebContainerManager', () => {
 
       // When & Then
       await expect(manager.writeFile('/src/index.ts', 'content')).rejects.toThrow('Write failed');
-      
+
       // Reset
       mockContainer.fs.writeFile.mockResolvedValue(undefined);
     });
@@ -295,7 +363,7 @@ describe('WebContainerManager', () => {
 
       // When & Then
       await expect(manager.readFile('/src/index.ts')).rejects.toThrow('Read failed');
-      
+
       // Reset
       mockContainer.fs.readFile.mockResolvedValue(new TextEncoder().encode('file contents'));
     });

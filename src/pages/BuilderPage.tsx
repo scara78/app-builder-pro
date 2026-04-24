@@ -16,6 +16,7 @@ import { useSettings } from '../contexts/SettingsContext';
 import { useAIBuilder } from '../hooks/useAIBuilder';
 import { useWebContainer } from '../hooks/useWebContainer';
 import { useConsoleLogs } from '../hooks/useConsoleLogs';
+import { useFileTree } from '../hooks/useFileTree';
 import { useBackendCreation } from '../hooks/backend/pipeline/useBackendCreation';
 import { useSupabaseOAuth } from '../hooks/backend/oauth/useSupabaseOAuth';
 import { adaptProject } from '../services/adapter';
@@ -41,6 +42,7 @@ const BuilderPageInner: React.FC<BuilderPageProps> = ({ initialPrompt }) => {
   const [currentFiles, setCurrentFiles] = useState<ProjectFile[]>([]);
   const [activeFile, setActiveFile] = useState<ProjectFile | null>(null);
   const { logs: consoleLogs, addLog, clearLogs } = useConsoleLogs();
+  const fileTree = useFileTree();
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isBackendModalOpen, setIsBackendModalOpen] = useState(false);
@@ -115,6 +117,7 @@ const BuilderPageInner: React.FC<BuilderPageProps> = ({ initialPrompt }) => {
           const tree = filesToTree(response.files);
           await mount(tree);
           await install(addLog);
+          await fileTree.refresh();
 
           setBuilderState('running');
           await runDev(addLog, (url) => {
@@ -128,7 +131,17 @@ const BuilderPageInner: React.FC<BuilderPageProps> = ({ initialPrompt }) => {
         setBuilderState('error');
       }
     },
-    [generate, mount, install, runDev, getEffectiveApiKey, modelId, resetBackend, showToast]
+    [
+      generate,
+      mount,
+      install,
+      runDev,
+      getEffectiveApiKey,
+      modelId,
+      resetBackend,
+      showToast,
+      fileTree.refresh,
+    ]
   );
 
   // Handler for retry after build error
@@ -252,6 +265,7 @@ const BuilderPageInner: React.FC<BuilderPageProps> = ({ initialPrompt }) => {
       const tree = filesToTree(adapted.files);
       await mount(tree);
       await install(addLog);
+      await fileTree.refresh();
       await runDev(addLog, (url) => {
         setPreviewUrl(url);
       });
@@ -276,7 +290,16 @@ const BuilderPageInner: React.FC<BuilderPageProps> = ({ initialPrompt }) => {
     } finally {
       setIsApplying(false);
     }
-  }, [backendResult, backendRequirements, currentFiles, mount, install, runDev, showToast]);
+  }, [
+    backendResult,
+    backendRequirements,
+    currentFiles,
+    mount,
+    install,
+    runDev,
+    showToast,
+    fileTree.refresh,
+  ]);
 
   return (
     <div className="builder-container">
@@ -341,7 +364,14 @@ const BuilderPageInner: React.FC<BuilderPageProps> = ({ initialPrompt }) => {
                     <PreviewPanel state={builderState} url={previewUrl} />
                   ) : (
                     <div className="editor-layout">
-                      {showExplorer && <FileExplorer files={currentFiles} />}
+                      {showExplorer && (
+                        <FileExplorer
+                          files={fileTree.files}
+                          isLoading={fileTree.isLoading}
+                          error={fileTree.error}
+                          onRefresh={fileTree.refresh}
+                        />
+                      )}
                       <CodeEditor
                         fileName={activeFile?.path || 'App.tsx'}
                         code={activeFile?.content || ''}

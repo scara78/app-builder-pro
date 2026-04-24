@@ -7,6 +7,7 @@ import * as useWebContainerModule from '../hooks/useWebContainer';
 import * as useBackendCreationModule from '../hooks/backend/pipeline/useBackendCreation';
 import * as useSupabaseOAuthModule from '../hooks/backend/oauth/useSupabaseOAuth';
 import * as useAdaptProjectModule from '../services/adapter';
+import * as useFileTreeModule from '../hooks/useFileTree';
 import { PipelineStage } from '../hooks/backend/pipeline/types';
 
 // Mock Toast system - capture showToast calls for verification
@@ -24,7 +25,9 @@ vi.mock('../components/common/TopBar', () => ({
     <div data-testid="topbar">
       <span data-testid="project-name">{projectName}</span>
       <span data-testid="builder-state">{state}</span>
-      <button data-testid="settings-btn" onClick={onOpenSettings}>Settings</button>
+      <button data-testid="settings-btn" onClick={onOpenSettings}>
+        Settings
+      </button>
     </div>
   ),
 }));
@@ -34,11 +37,10 @@ vi.mock('../components/chat/ChatPanel', () => ({
     <div data-testid="chat-panel">
       <span data-testid="message-count">{messages.length}</span>
       <span data-testid="is-generating">{String(isGenerating)}</span>
-      <input
-        data-testid="chat-input"
-        onChange={() => {}}
-      />
-      <button data-testid="send-btn" onClick={() => onSendMessage('test message')}>Send</button>
+      <input data-testid="chat-input" onChange={() => {}} />
+      <button data-testid="send-btn" onClick={() => onSendMessage('test message')}>
+        Send
+      </button>
     </div>
   ),
 }));
@@ -81,7 +83,9 @@ vi.mock('../components/common/ConsolePanel', () => ({
 vi.mock('../components/settings/SettingsModal', () => ({
   default: ({ onClose }: any) => (
     <div data-testid="settings-modal">
-      <button data-testid="close-modal" onClick={onClose}>Close</button>
+      <button data-testid="close-modal" onClick={onClose}>
+        Close
+      </button>
     </div>
   ),
 }));
@@ -97,8 +101,12 @@ vi.mock('../components/backend/BackendCreationModal', () => ({
       <span data-testid="backend-progress">{progress}</span>
       <span data-testid="backend-error">{error}</span>
       <span data-testid="backend-is-creating">{String(isCreating)}</span>
-      <button data-testid="backend-retry-btn" onClick={onRetry}>Retry</button>
-      <button data-testid="backend-close-btn" onClick={onClose}>Close</button>
+      <button data-testid="backend-retry-btn" onClick={onRetry}>
+        Retry
+      </button>
+      <button data-testid="backend-close-btn" onClick={onClose}>
+        Close
+      </button>
     </div>
   ),
 }));
@@ -110,12 +118,10 @@ vi.mock('../components/backend/CredentialsModal', () => ({
       <span data-testid="credentials-anon-key">{result?.anonKey}</span>
       <span data-testid="credentials-project-name">{result?.projectName}</span>
       <span data-testid="credentials-is-applying">{String(isApplying ?? false)}</span>
-      <button data-testid="credentials-close-btn" onClick={onClose}>Done</button>
-      <button
-        data-testid="credentials-apply-btn"
-        onClick={onApply}
-        disabled={isApplying}
-      >
+      <button data-testid="credentials-close-btn" onClick={onClose}>
+        Done
+      </button>
+      <button data-testid="credentials-apply-btn" onClick={onApply} disabled={isApplying}>
         Apply to Project
       </button>
     </div>
@@ -176,6 +182,14 @@ describe('BuilderPage', () => {
       retry: mockRetryBackend,
       reset: mockResetBackend,
     } as any);
+
+    // Mock de useFileTree
+    vi.spyOn(useFileTreeModule, 'useFileTree').mockReturnValue({
+      files: [],
+      isLoading: false,
+      error: null,
+      refresh: vi.fn().mockResolvedValue(undefined),
+    } as any);
   });
 
   afterEach(() => {
@@ -188,16 +202,16 @@ describe('BuilderPage', () => {
     it('renders main panels correctly when preview tab is active', () => {
       // Given
       const initialPrompt = '';
-      
+
       // When
       render(<BuilderPage initialPrompt={initialPrompt} />);
-      
+
       // Then - verificar que los paneles principales existen (preview por defecto)
       const topbar = screen.getByTestId('topbar');
       const chatPanel = screen.getByTestId('chat-panel');
       const previewPanel = screen.getByTestId('preview-panel');
       const consolePanel = screen.getByTestId('console-panel');
-      
+
       expect(topbar).toBeDefined();
       expect(chatPanel).toBeDefined();
       expect(previewPanel).toBeDefined();
@@ -207,10 +221,10 @@ describe('BuilderPage', () => {
     it('shows correct project name in TopBar', () => {
       // Given
       const initialPrompt = '';
-      
+
       // When
       render(<BuilderPage initialPrompt={initialPrompt} />);
-      
+
       // Then
       const projectName = screen.getByTestId('project-name');
       expect(projectName.textContent).toBe('App Builder Pro');
@@ -221,10 +235,10 @@ describe('BuilderPage', () => {
     it('starts in idle state', () => {
       // Given
       const initialPrompt = '';
-      
+
       // When
       render(<BuilderPage initialPrompt={initialPrompt} />);
-      
+
       // Then
       const builderState = screen.getByTestId('builder-state');
       expect(builderState.textContent).toBe('idle');
@@ -237,12 +251,12 @@ describe('BuilderPage', () => {
         message: 'Here is your app',
         files: [],
       });
-      
+
       render(<BuilderPage initialPrompt={initialPrompt} />);
-      
+
       // When - usuario hace click en send
       fireEvent.click(screen.getByTestId('send-btn'));
-      
+
       // Then - estado debe ser generating o idle (sin archivos)
       // El mock genera archivos vacíos, entonces vuelve a idle
       const state = screen.getByTestId('builder-state');
@@ -254,10 +268,10 @@ describe('BuilderPage', () => {
     it('has preview panel rendered by default', () => {
       // Given
       const initialPrompt = '';
-      
+
       // When
       render(<BuilderPage initialPrompt={initialPrompt} />);
-      
+
       // Then - verificar que preview panel está renderizado
       const previewPanel = screen.getByTestId('preview-panel');
       expect(previewPanel).toBeDefined();
@@ -266,10 +280,10 @@ describe('BuilderPage', () => {
     it('has two tabs in workspace', () => {
       // Given
       const initialPrompt = '';
-      
+
       // When
       render(<BuilderPage initialPrompt={initialPrompt} />);
-      
+
       // Then - verificar que hay tabs en el workspace
       const tabs = document.querySelectorAll('.tab-btn');
       expect(tabs.length).toBe(2);
@@ -286,12 +300,12 @@ describe('BuilderPage', () => {
         message: 'Generated code',
         files: [],
       });
-      
+
       render(<BuilderPage initialPrompt={initialPrompt} />);
-      
+
       // When
       fireEvent.click(screen.getByTestId('send-btn'));
-      
+
       // Then
       await waitFor(() => {
         expect(mockGenerate).toHaveBeenCalled();
@@ -305,12 +319,12 @@ describe('BuilderPage', () => {
         message: 'Generated code',
         files: [],
       });
-      
+
       render(<BuilderPage initialPrompt={initialPrompt} />);
-      
+
       // When
       fireEvent.click(screen.getByTestId('send-btn'));
-      
+
       // Then - el mock fue llamado
       await waitFor(() => {
         expect(mockGenerate).toHaveBeenCalledTimes(1);
@@ -333,12 +347,12 @@ describe('BuilderPage', () => {
       mockMount.mockResolvedValue(undefined);
       mockInstall.mockResolvedValue(1);
       mockRunDev.mockResolvedValue(undefined);
-      
+
       render(<BuilderPage initialPrompt={initialPrompt} />);
-      
+
       // When - send message que genera archivos
       fireEvent.click(screen.getByTestId('send-btn'));
-      
+
       // Then - esperar que se monte el código
       await waitFor(() => {
         expect(mockMount).toHaveBeenCalled();
@@ -351,12 +365,12 @@ describe('BuilderPage', () => {
       // Given
       const initialPrompt = '';
       mockGenerate.mockRejectedValue(new Error('API Error'));
-      
+
       render(<BuilderPage initialPrompt={initialPrompt} />);
-      
+
       // When
       fireEvent.click(screen.getByTestId('send-btn'));
-      
+
       // Then - el estado debería ser error
       await waitFor(() => {
         const state = screen.getByTestId('builder-state').textContent;
@@ -367,9 +381,9 @@ describe('BuilderPage', () => {
     it('displays console panel for error logs', () => {
       // Given
       const initialPrompt = '';
-      
+
       render(<BuilderPage initialPrompt={initialPrompt} />);
-      
+
       // Then
       const consolePanel = screen.getByTestId('console-panel');
       expect(consolePanel).toBeDefined();
@@ -383,12 +397,12 @@ describe('BuilderPage', () => {
       // Given
       const initialPrompt = '';
       mockGenerate.mockRejectedValue(new Error('429: Quota exceeded'));
-      
+
       render(<BuilderPage initialPrompt={initialPrompt} />);
-      
+
       // When
       fireEvent.click(screen.getByTestId('send-btn'));
-      
+
       // Then - debe manejar el error
       await waitFor(() => {
         expect(mockGenerate).toHaveBeenCalled();
@@ -404,12 +418,12 @@ describe('BuilderPage', () => {
         message: 'Generated code',
         files: [],
       });
-      
+
       render(<BuilderPage initialPrompt={initialPrompt} />);
-      
+
       // When - envía mensaje
       fireEvent.click(screen.getByTestId('send-btn'));
-      
+
       // Then
       await waitFor(() => {
         expect(mockGetEffectiveApiKey).toHaveBeenCalled();
@@ -421,10 +435,10 @@ describe('BuilderPage', () => {
     it('renders without processing when empty', () => {
       // Given
       const initialPrompt = '';
-      
+
       // When
       render(<BuilderPage initialPrompt={initialPrompt} />);
-      
+
       // Then - no debe llamar a generate desde el inicio
       expect(mockGenerate).not.toHaveBeenCalled();
     });
@@ -434,13 +448,13 @@ describe('BuilderPage', () => {
     it('can open settings modal via TopBar', () => {
       // Given
       const initialPrompt = '';
-      
+
       // When
       render(<BuilderPage initialPrompt={initialPrompt} />);
-      
+
       // Click en settings
       fireEvent.click(screen.getByTestId('settings-btn'));
-      
+
       // Then - settings modal debe renderizarse
       const settingsModal = screen.getByTestId('settings-modal');
       expect(settingsModal).toBeDefined();
@@ -450,14 +464,14 @@ describe('BuilderPage', () => {
       // Given
       const initialPrompt = '';
       render(<BuilderPage initialPrompt={initialPrompt} />);
-      
+
       // Abrir settings
       fireEvent.click(screen.getByTestId('settings-btn'));
       expect(screen.getByTestId('settings-modal')).toBeDefined();
-      
+
       // Cerrar settings
       fireEvent.click(screen.getByTestId('close-modal'));
-      
+
       // Then - settings modal ya no debe estar en el documento
       const modal = screen.queryByTestId('settings-modal');
       expect(modal).toBeNull();
@@ -468,19 +482,17 @@ describe('BuilderPage', () => {
     it('calls mount when files are generated', async () => {
       // Given
       const initialPrompt = '';
-      const mockFiles = [
-        { path: 'App.tsx', content: 'const App = () => <div>Hello</div>' },
-      ];
+      const mockFiles = [{ path: 'App.tsx', content: 'const App = () => <div>Hello</div>' }];
       mockGenerate.mockResolvedValue({
         message: 'Here is your app',
         files: mockFiles,
       });
-      
+
       render(<BuilderPage initialPrompt={initialPrompt} />);
-      
+
       // When
       fireEvent.click(screen.getByTestId('send-btn'));
-      
+
       // Then - verificar que se monta
       await waitFor(() => {
         expect(mockMount).toHaveBeenCalled();
@@ -490,19 +502,17 @@ describe('BuilderPage', () => {
     it('calls install after mount', async () => {
       // Given
       const initialPrompt = '';
-      const mockFiles = [
-        { path: 'App.tsx', content: 'const App = () => <div>Hello</div>' },
-      ];
+      const mockFiles = [{ path: 'App.tsx', content: 'const App = () => <div>Hello</div>' }];
       mockGenerate.mockResolvedValue({
         message: 'Here is your app',
         files: mockFiles,
       });
-      
+
       render(<BuilderPage initialPrompt={initialPrompt} />);
-      
+
       // When
       fireEvent.click(screen.getByTestId('send-btn'));
-      
+
       // Then
       await waitFor(() => {
         expect(mockInstall).toHaveBeenCalled();
@@ -512,31 +522,27 @@ describe('BuilderPage', () => {
     it('calls runDev after install', async () => {
       // Given
       const initialPrompt = '';
-      const mockFiles = [
-        { path: 'App.tsx', content: 'const App = () => <div>Hello</div>' },
-      ];
+      const mockFiles = [{ path: 'App.tsx', content: 'const App = () => <div>Hello</div>' }];
       mockGenerate.mockResolvedValue({
         message: 'Here is your app',
         files: mockFiles,
       });
-      
+
       render(<BuilderPage initialPrompt={initialPrompt} />);
-      
+
       // When
       fireEvent.click(screen.getByTestId('send-btn'));
-      
+
       // Then
       await waitFor(() => {
         expect(mockRunDev).toHaveBeenCalled();
       });
     });
 
-it('sets preview URL when runDev completes', async () => {
+    it('sets preview URL when runDev completes', async () => {
       // Given
       const initialPrompt = '';
-      const mockFiles = [
-        { path: 'App.tsx', content: 'const App = () => <div>Hello</div>' },
-      ];
+      const mockFiles = [{ path: 'App.tsx', content: 'const App = () => <div>Hello</div>' }];
       mockGenerate.mockResolvedValue({
         message: 'Here is your app',
         files: mockFiles,
@@ -593,7 +599,7 @@ it('sets preview URL when runDev completes', async () => {
         projectName: 'test-project',
         migrationName: 'initial_migration',
       };
-      
+
       vi.spyOn(useBackendCreationModule, 'useBackendCreation').mockReturnValue({
         stage: PipelineStage.COMPLETE,
         progress: 100,
@@ -612,7 +618,9 @@ it('sets preview URL when runDev completes', async () => {
       // Then - CredentialsModal should be rendered with result data
       await waitFor(() => {
         expect(screen.getByTestId('credentials-modal')).toBeDefined();
-        expect(screen.getByTestId('credentials-project-url').textContent).toBe('https://test-project.supabase.co');
+        expect(screen.getByTestId('credentials-project-url').textContent).toBe(
+          'https://test-project.supabase.co'
+        );
         expect(screen.getByTestId('credentials-project-name').textContent).toBe('test-project');
       });
     });
@@ -651,7 +659,7 @@ it('sets preview URL when runDev completes', async () => {
       // After clicking, the modal should close
       const closeButton = screen.getByTestId('credentials-close-btn');
       expect(closeButton).toBeDefined();
-      
+
       // When - the component should respond to the close action
       fireEvent.click(closeButton);
 
@@ -710,7 +718,15 @@ it('sets preview URL when runDev completes', async () => {
         migrationName: 'initial_migration',
       };
       const mockRequirements = {
-        entities: [{ name: 'User', typeName: 'User', fields: [], confidence: 90, matchType: 'pattern' as const }],
+        entities: [
+          {
+            name: 'User',
+            typeName: 'User',
+            fields: [],
+            confidence: 90,
+            matchType: 'pattern' as const,
+          },
+        ],
         hasAuth: true,
         crudOperations: [],
         overallConfidence: 85,
@@ -736,7 +752,9 @@ it('sets preview URL when runDev completes', async () => {
       // Then - CredentialsModal should receive result data
       await waitFor(() => {
         expect(screen.getByTestId('credentials-modal')).toBeDefined();
-        expect(screen.getByTestId('credentials-project-url').textContent).toBe('https://test-project.supabase.co');
+        expect(screen.getByTestId('credentials-project-url').textContent).toBe(
+          'https://test-project.supabase.co'
+        );
       });
     });
   });
@@ -888,7 +906,15 @@ it('sets preview URL when runDev completes', async () => {
         migrationName: 'initial_migration',
       };
       const mockRequirements = {
-        entities: [{ name: 'User', typeName: 'User', fields: [], confidence: 90, matchType: 'pattern' as const }],
+        entities: [
+          {
+            name: 'User',
+            typeName: 'User',
+            fields: [],
+            confidence: 90,
+            matchType: 'pattern' as const,
+          },
+        ],
         hasAuth: true,
         crudOperations: [],
         overallConfidence: 85,
@@ -909,9 +935,7 @@ it('sets preview URL when runDev completes', async () => {
       } as any);
 
       // We need files to be present for the apply to work
-      const mockFiles = [
-        { path: 'App.tsx', content: 'const App = () => <div>Hello</div>' },
-      ];
+      const mockFiles = [{ path: 'App.tsx', content: 'const App = () => <div>Hello</div>' }];
       mockGenerate.mockResolvedValue({
         message: 'Here is your app',
         files: mockFiles,
@@ -947,7 +971,15 @@ it('sets preview URL when runDev completes', async () => {
         migrationName: 'initial_migration',
       };
       const mockRequirements = {
-        entities: [{ name: 'User', typeName: 'User', fields: [], confidence: 90, matchType: 'pattern' as const }],
+        entities: [
+          {
+            name: 'User',
+            typeName: 'User',
+            fields: [],
+            confidence: 90,
+            matchType: 'pattern' as const,
+          },
+        ],
         hasAuth: true,
         crudOperations: [],
         overallConfidence: 85,
@@ -978,345 +1010,359 @@ it('sets preview URL when runDev completes', async () => {
       const applyButton = screen.getByTestId('credentials-apply-btn');
       fireEvent.click(applyButton);
 
-    // Then - the callback should be wired (verified by the test setup)
-    expect(applyButton).toBeDefined();
-  });
-});
-
-// ===== Phase 4: Edge Cases & Error Handling Tests (RA-004, RA-006) =====
-
-describe('Edge Cases: Adaptation Skipped', () => {
-  it('should show info toast when adaptation is skipped', async () => {
-    // Given - setup with result and requirements
-    const initialPrompt = '';
-    const mockResult = {
-      projectUrl: 'https://test-project.supabase.co',
-      anonKey: 'test-anon-key-12345',
-      projectName: 'test-project',
-      migrationName: 'initial_migration',
-    };
-    const mockRequirements = {
-      entities: [], // Empty entities = no Supabase needed
-      hasAuth: false,
-      crudOperations: [],
-      overallConfidence: 85,
-      analysisMethod: 'pattern' as const,
-      analyzedAt: '2024-01-01T00:00:00Z',
-    };
-
-    // Mock adaptProject to return skipped result
-    vi.spyOn(useAdaptProjectModule, 'adaptProject').mockReturnValue({
-      files: [],
-      injectedFiles: [],
-      transformedFiles: [],
-      skipped: true,
-      reason: 'No entities detected - no Supabase integration needed',
-    });
-
-    vi.spyOn(useBackendCreationModule, 'useBackendCreation').mockReturnValue({
-      stage: PipelineStage.COMPLETE,
-      progress: 100,
-      isCreating: false,
-      error: null,
-      result: mockResult,
-      requirements: mockRequirements,
-      createBackend: mockCreateBackend,
-      retry: mockRetryBackend,
-      reset: mockResetBackend,
-    } as any);
-
-    render(<BuilderPage initialPrompt={initialPrompt} />);
-
-    // Wait for modal to appear
-    await waitFor(() => {
-      expect(screen.getByTestId('credentials-modal')).toBeDefined();
-    });
-
-    // When - click Apply button
-    const applyButton = screen.getByTestId('credentials-apply-btn');
-    fireEvent.click(applyButton);
-
-    // Then - info toast should be called
-    await waitFor(() => {
-      expect(mockShowToast).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'info',
-          message: expect.stringContaining('No entities detected'),
-        })
-      );
+      // Then - the callback should be wired (verified by the test setup)
+      expect(applyButton).toBeDefined();
     });
   });
 
-  it('should keep CredentialsModal open when adaptation is skipped', async () => {
-    // Given
-    const initialPrompt = '';
-    const mockResult = {
-      projectUrl: 'https://test-project.supabase.co',
-      anonKey: 'test-anon-key-12345',
-      projectName: 'test-project',
-      migrationName: 'initial_migration',
-    };
-    const mockRequirements = {
-      entities: [],
-      hasAuth: false,
-      crudOperations: [],
-      overallConfidence: 85,
-      analysisMethod: 'pattern' as const,
-      analyzedAt: '2024-01-01T00:00:00Z',
-    };
+  // ===== Phase 4: Edge Cases & Error Handling Tests (RA-004, RA-006) =====
 
-    // Mock adaptProject to return skipped result
-    vi.spyOn(useAdaptProjectModule, 'adaptProject').mockReturnValue({
-      files: [],
-      injectedFiles: [],
-      transformedFiles: [],
-      skipped: true,
-      reason: 'No backend integration needed',
+  describe('Edge Cases: Adaptation Skipped', () => {
+    it('should show info toast when adaptation is skipped', async () => {
+      // Given - setup with result and requirements
+      const initialPrompt = '';
+      const mockResult = {
+        projectUrl: 'https://test-project.supabase.co',
+        anonKey: 'test-anon-key-12345',
+        projectName: 'test-project',
+        migrationName: 'initial_migration',
+      };
+      const mockRequirements = {
+        entities: [], // Empty entities = no Supabase needed
+        hasAuth: false,
+        crudOperations: [],
+        overallConfidence: 85,
+        analysisMethod: 'pattern' as const,
+        analyzedAt: '2024-01-01T00:00:00Z',
+      };
+
+      // Mock adaptProject to return skipped result
+      vi.spyOn(useAdaptProjectModule, 'adaptProject').mockReturnValue({
+        files: [],
+        injectedFiles: [],
+        transformedFiles: [],
+        skipped: true,
+        reason: 'No entities detected - no Supabase integration needed',
+      });
+
+      vi.spyOn(useBackendCreationModule, 'useBackendCreation').mockReturnValue({
+        stage: PipelineStage.COMPLETE,
+        progress: 100,
+        isCreating: false,
+        error: null,
+        result: mockResult,
+        requirements: mockRequirements,
+        createBackend: mockCreateBackend,
+        retry: mockRetryBackend,
+        reset: mockResetBackend,
+      } as any);
+
+      render(<BuilderPage initialPrompt={initialPrompt} />);
+
+      // Wait for modal to appear
+      await waitFor(() => {
+        expect(screen.getByTestId('credentials-modal')).toBeDefined();
+      });
+
+      // When - click Apply button
+      const applyButton = screen.getByTestId('credentials-apply-btn');
+      fireEvent.click(applyButton);
+
+      // Then - info toast should be called
+      await waitFor(() => {
+        expect(mockShowToast).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'info',
+            message: expect.stringContaining('No entities detected'),
+          })
+        );
+      });
     });
 
-    vi.spyOn(useBackendCreationModule, 'useBackendCreation').mockReturnValue({
-      stage: PipelineStage.COMPLETE,
-      progress: 100,
-      isCreating: false,
-      error: null,
-      result: mockResult,
-      requirements: mockRequirements,
-      createBackend: mockCreateBackend,
-      retry: mockRetryBackend,
-      reset: mockResetBackend,
-    } as any);
+    it('should keep CredentialsModal open when adaptation is skipped', async () => {
+      // Given
+      const initialPrompt = '';
+      const mockResult = {
+        projectUrl: 'https://test-project.supabase.co',
+        anonKey: 'test-anon-key-12345',
+        projectName: 'test-project',
+        migrationName: 'initial_migration',
+      };
+      const mockRequirements = {
+        entities: [],
+        hasAuth: false,
+        crudOperations: [],
+        overallConfidence: 85,
+        analysisMethod: 'pattern' as const,
+        analyzedAt: '2024-01-01T00:00:00Z',
+      };
 
-    render(<BuilderPage initialPrompt={initialPrompt} />);
+      // Mock adaptProject to return skipped result
+      vi.spyOn(useAdaptProjectModule, 'adaptProject').mockReturnValue({
+        files: [],
+        injectedFiles: [],
+        transformedFiles: [],
+        skipped: true,
+        reason: 'No backend integration needed',
+      });
 
-    // Wait for modal
-    await waitFor(() => {
-      expect(screen.getByTestId('credentials-modal')).toBeDefined();
-    });
+      vi.spyOn(useBackendCreationModule, 'useBackendCreation').mockReturnValue({
+        stage: PipelineStage.COMPLETE,
+        progress: 100,
+        isCreating: false,
+        error: null,
+        result: mockResult,
+        requirements: mockRequirements,
+        createBackend: mockCreateBackend,
+        retry: mockRetryBackend,
+        reset: mockResetBackend,
+      } as any);
 
-    // When - click Apply (should skip adaptation)
-    const applyButton = screen.getByTestId('credentials-apply-btn');
-    fireEvent.click(applyButton);
+      render(<BuilderPage initialPrompt={initialPrompt} />);
 
-    // Then - modal should still be visible (not closed)
-    await waitFor(() => {
-      expect(screen.getByTestId('credentials-modal')).toBeDefined();
-    });
-  });
-});
+      // Wait for modal
+      await waitFor(() => {
+        expect(screen.getByTestId('credentials-modal')).toBeDefined();
+      });
 
-describe('Edge Cases: WebContainer Remount Failure', () => {
-  it('should show error toast when WebContainer remount fails', async () => {
-    // Given
-    const initialPrompt = '';
-    const mockResult = {
-      projectUrl: 'https://test-project.supabase.co',
-      anonKey: 'test-anon-key-12345',
-      projectName: 'test-project',
-      migrationName: 'initial_migration',
-    };
-    const mockRequirements = {
-      entities: [{ name: 'User', typeName: 'User', fields: [], confidence: 90, matchType: 'pattern' as const }],
-      hasAuth: true,
-      crudOperations: [],
-      overallConfidence: 85,
-      analysisMethod: 'pattern' as const,
-      analyzedAt: '2024-01-01T00:00:00Z',
-    };
+      // When - click Apply (should skip adaptation)
+      const applyButton = screen.getByTestId('credentials-apply-btn');
+      fireEvent.click(applyButton);
 
-    // Mock adaptProject to return successful adaptation
-    vi.spyOn(useAdaptProjectModule, 'adaptProject').mockReturnValue({
-      files: [{ path: 'src/App.tsx', content: '// adapted' }],
-      injectedFiles: ['src/lib/supabase.ts'],
-      transformedFiles: ['src/App.tsx'],
-      skipped: false,
-    });
-
-    vi.spyOn(useBackendCreationModule, 'useBackendCreation').mockReturnValue({
-      stage: PipelineStage.COMPLETE,
-      progress: 100,
-      isCreating: false,
-      error: null,
-      result: mockResult,
-      requirements: mockRequirements,
-      createBackend: mockCreateBackend,
-      retry: mockRetryBackend,
-      reset: mockResetBackend,
-    } as any);
-
-    // Mock mount to throw error
-    mockMount.mockRejectedValueOnce(new Error('Mount failed'));
-
-    render(<BuilderPage initialPrompt={initialPrompt} />);
-
-    // Wait for modal
-    await waitFor(() => {
-      expect(screen.getByTestId('credentials-modal')).toBeDefined();
-    });
-
-    // When - click Apply
-    const applyButton = screen.getByTestId('credentials-apply-btn');
-    fireEvent.click(applyButton);
-
-    // Then - error toast should be called
-    await waitFor(() => {
-      expect(mockShowToast).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'error',
-          message: expect.stringContaining('Failed to apply backend'),
-        })
-      );
-    });
-  });
-
-  it('should keep modal open on error so user can retry', async () => {
-    // Given
-    const initialPrompt = '';
-    const mockResult = {
-      projectUrl: 'https://test-project.supabase.co',
-      anonKey: 'test-anon-key-12345',
-      projectName: 'test-project',
-      migrationName: 'initial_migration',
-    };
-    const mockRequirements = {
-      entities: [{ name: 'User', typeName: 'User', fields: [], confidence: 90, matchType: 'pattern' as const }],
-      hasAuth: true,
-      crudOperations: [],
-      overallConfidence: 85,
-      analysisMethod: 'pattern' as const,
-      analyzedAt: '2024-01-01T00:00:00Z',
-    };
-
-    // Mock adaptProject to return successful adaptation
-    vi.spyOn(useAdaptProjectModule, 'adaptProject').mockReturnValue({
-      files: [{ path: 'src/App.tsx', content: '// adapted' }],
-      injectedFiles: ['src/lib/supabase.ts'],
-      transformedFiles: ['src/App.tsx'],
-      skipped: false,
-    });
-
-    vi.spyOn(useBackendCreationModule, 'useBackendCreation').mockReturnValue({
-      stage: PipelineStage.COMPLETE,
-      progress: 100,
-      isCreating: false,
-      error: null,
-      result: mockResult,
-      requirements: mockRequirements,
-      createBackend: mockCreateBackend,
-      retry: mockRetryBackend,
-      reset: mockResetBackend,
-    } as any);
-
-    // Mock mount to throw error
-    mockMount.mockRejectedValueOnce(new Error('Mount failed'));
-
-    render(<BuilderPage initialPrompt={initialPrompt} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('credentials-modal')).toBeDefined();
-    });
-
-    // When - Apply fails
-    const applyButton = screen.getByTestId('credentials-apply-btn');
-    fireEvent.click(applyButton);
-
-    // Then - modal stays open
-    await waitFor(() => {
-      expect(screen.getByTestId('credentials-modal')).toBeDefined();
-    });
-  });
-});
-
-describe('Edge Cases: Missing Requirements', () => {
-  it('should show error message when requirements is null', async () => {
-    // Given
-    const initialPrompt = '';
-    const mockResult = {
-      projectUrl: 'https://test-project.supabase.co',
-      anonKey: 'test-anon-key-12345',
-      projectName: 'test-project',
-      migrationName: 'initial_migration',
-    };
-
-    vi.spyOn(useBackendCreationModule, 'useBackendCreation').mockReturnValue({
-      stage: PipelineStage.COMPLETE,
-      progress: 100,
-      isCreating: false,
-      error: null,
-      result: mockResult,
-      requirements: null, // Missing requirements!
-      createBackend: mockCreateBackend,
-      retry: mockRetryBackend,
-      reset: mockResetBackend,
-    } as any);
-
-    render(<BuilderPage initialPrompt={initialPrompt} />);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('credentials-modal')).toBeDefined();
-    });
-
-    // When - click Apply
-    const applyButton = screen.getByTestId('credentials-apply-btn');
-    fireEvent.click(applyButton);
-
-    // Then - error toast should be called
-    await waitFor(() => {
-      expect(mockShowToast).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'error',
-          message: expect.stringContaining('requirements not available'),
-        })
-      );
+      // Then - modal should still be visible (not closed)
+      await waitFor(() => {
+        expect(screen.getByTestId('credentials-modal')).toBeDefined();
+      });
     });
   });
 
-  it('should not close modal when requirements is missing', async () => {
-    // Given
-    const initialPrompt = '';
-    const mockResult = {
-      projectUrl: 'https://test-project.supabase.co',
-      anonKey: 'test-anon-key-12345',
-      projectName: 'test-project',
-      migrationName: 'initial_migration',
-    };
+  describe('Edge Cases: WebContainer Remount Failure', () => {
+    it('should show error toast when WebContainer remount fails', async () => {
+      // Given
+      const initialPrompt = '';
+      const mockResult = {
+        projectUrl: 'https://test-project.supabase.co',
+        anonKey: 'test-anon-key-12345',
+        projectName: 'test-project',
+        migrationName: 'initial_migration',
+      };
+      const mockRequirements = {
+        entities: [
+          {
+            name: 'User',
+            typeName: 'User',
+            fields: [],
+            confidence: 90,
+            matchType: 'pattern' as const,
+          },
+        ],
+        hasAuth: true,
+        crudOperations: [],
+        overallConfidence: 85,
+        analysisMethod: 'pattern' as const,
+        analyzedAt: '2024-01-01T00:00:00Z',
+      };
 
-    vi.spyOn(useBackendCreationModule, 'useBackendCreation').mockReturnValue({
-      stage: PipelineStage.COMPLETE,
-      progress: 100,
-      isCreating: false,
-      error: null,
-      result: mockResult,
-      requirements: null,
-      createBackend: mockCreateBackend,
-      retry: mockRetryBackend,
-      reset: mockResetBackend,
-    } as any);
+      // Mock adaptProject to return successful adaptation
+      vi.spyOn(useAdaptProjectModule, 'adaptProject').mockReturnValue({
+        files: [{ path: 'src/App.tsx', content: '// adapted' }],
+        injectedFiles: ['src/lib/supabase.ts'],
+        transformedFiles: ['src/App.tsx'],
+        skipped: false,
+      });
 
-    render(<BuilderPage initialPrompt={initialPrompt} />);
+      vi.spyOn(useBackendCreationModule, 'useBackendCreation').mockReturnValue({
+        stage: PipelineStage.COMPLETE,
+        progress: 100,
+        isCreating: false,
+        error: null,
+        result: mockResult,
+        requirements: mockRequirements,
+        createBackend: mockCreateBackend,
+        retry: mockRetryBackend,
+        reset: mockResetBackend,
+      } as any);
 
-    await waitFor(() => {
-      expect(screen.getByTestId('credentials-modal')).toBeDefined();
+      // Mock mount to throw error
+      mockMount.mockRejectedValueOnce(new Error('Mount failed'));
+
+      render(<BuilderPage initialPrompt={initialPrompt} />);
+
+      // Wait for modal
+      await waitFor(() => {
+        expect(screen.getByTestId('credentials-modal')).toBeDefined();
+      });
+
+      // When - click Apply
+      const applyButton = screen.getByTestId('credentials-apply-btn');
+      fireEvent.click(applyButton);
+
+      // Then - error toast should be called
+      await waitFor(() => {
+        expect(mockShowToast).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'error',
+            message: expect.stringContaining('Failed to apply backend'),
+          })
+        );
+      });
     });
 
-    const applyButton = screen.getByTestId('credentials-apply-btn');
-    fireEvent.click(applyButton);
+    it('should keep modal open on error so user can retry', async () => {
+      // Given
+      const initialPrompt = '';
+      const mockResult = {
+        projectUrl: 'https://test-project.supabase.co',
+        anonKey: 'test-anon-key-12345',
+        projectName: 'test-project',
+        migrationName: 'initial_migration',
+      };
+      const mockRequirements = {
+        entities: [
+          {
+            name: 'User',
+            typeName: 'User',
+            fields: [],
+            confidence: 90,
+            matchType: 'pattern' as const,
+          },
+        ],
+        hasAuth: true,
+        crudOperations: [],
+        overallConfidence: 85,
+        analysisMethod: 'pattern' as const,
+        analyzedAt: '2024-01-01T00:00:00Z',
+      };
 
-    // Modal should still be visible
-    await waitFor(() => {
-      expect(screen.getByTestId('credentials-modal')).toBeDefined();
+      // Mock adaptProject to return successful adaptation
+      vi.spyOn(useAdaptProjectModule, 'adaptProject').mockReturnValue({
+        files: [{ path: 'src/App.tsx', content: '// adapted' }],
+        injectedFiles: ['src/lib/supabase.ts'],
+        transformedFiles: ['src/App.tsx'],
+        skipped: false,
+      });
+
+      vi.spyOn(useBackendCreationModule, 'useBackendCreation').mockReturnValue({
+        stage: PipelineStage.COMPLETE,
+        progress: 100,
+        isCreating: false,
+        error: null,
+        result: mockResult,
+        requirements: mockRequirements,
+        createBackend: mockCreateBackend,
+        retry: mockRetryBackend,
+        reset: mockResetBackend,
+      } as any);
+
+      // Mock mount to throw error
+      mockMount.mockRejectedValueOnce(new Error('Mount failed'));
+
+      render(<BuilderPage initialPrompt={initialPrompt} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('credentials-modal')).toBeDefined();
+      });
+
+      // When - Apply fails
+      const applyButton = screen.getByTestId('credentials-apply-btn');
+      fireEvent.click(applyButton);
+
+      // Then - modal stays open
+      await waitFor(() => {
+        expect(screen.getByTestId('credentials-modal')).toBeDefined();
+      });
     });
   });
-});
 
-// ===== Phase 5: State Clearing Tests (RA-007) =====
+  describe('Edge Cases: Missing Requirements', () => {
+    it('should show error message when requirements is null', async () => {
+      // Given
+      const initialPrompt = '';
+      const mockResult = {
+        projectUrl: 'https://test-project.supabase.co',
+        anonKey: 'test-anon-key-12345',
+        projectName: 'test-project',
+        migrationName: 'initial_migration',
+      };
+
+      vi.spyOn(useBackendCreationModule, 'useBackendCreation').mockReturnValue({
+        stage: PipelineStage.COMPLETE,
+        progress: 100,
+        isCreating: false,
+        error: null,
+        result: mockResult,
+        requirements: null, // Missing requirements!
+        createBackend: mockCreateBackend,
+        retry: mockRetryBackend,
+        reset: mockResetBackend,
+      } as any);
+
+      render(<BuilderPage initialPrompt={initialPrompt} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('credentials-modal')).toBeDefined();
+      });
+
+      // When - click Apply
+      const applyButton = screen.getByTestId('credentials-apply-btn');
+      fireEvent.click(applyButton);
+
+      // Then - error toast should be called
+      await waitFor(() => {
+        expect(mockShowToast).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'error',
+            message: expect.stringContaining('requirements not available'),
+          })
+        );
+      });
+    });
+
+    it('should not close modal when requirements is missing', async () => {
+      // Given
+      const initialPrompt = '';
+      const mockResult = {
+        projectUrl: 'https://test-project.supabase.co',
+        anonKey: 'test-anon-key-12345',
+        projectName: 'test-project',
+        migrationName: 'initial_migration',
+      };
+
+      vi.spyOn(useBackendCreationModule, 'useBackendCreation').mockReturnValue({
+        stage: PipelineStage.COMPLETE,
+        progress: 100,
+        isCreating: false,
+        error: null,
+        result: mockResult,
+        requirements: null,
+        createBackend: mockCreateBackend,
+        retry: mockRetryBackend,
+        reset: mockResetBackend,
+      } as any);
+
+      render(<BuilderPage initialPrompt={initialPrompt} />);
+
+      await waitFor(() => {
+        expect(screen.getByTestId('credentials-modal')).toBeDefined();
+      });
+
+      const applyButton = screen.getByTestId('credentials-apply-btn');
+      fireEvent.click(applyButton);
+
+      // Modal should still be visible
+      await waitFor(() => {
+        expect(screen.getByTestId('credentials-modal')).toBeDefined();
+      });
+    });
+  });
+
+  // ===== Phase 5: State Clearing Tests (RA-007) =====
 
   describe('State Clearing on New Generation', () => {
     it('should call resetBackend when sending a new message', async () => {
       // Given
       const initialPrompt = '';
-      const mockFiles = [
-        { path: 'App.tsx', content: 'const App = () => <div>Hello</div>' },
-      ];
+      const mockFiles = [{ path: 'App.tsx', content: 'const App = () => <div>Hello</div>' }];
       mockGenerate.mockResolvedValue({
         message: 'Here is your app',
         files: mockFiles,
@@ -1336,9 +1382,7 @@ describe('Edge Cases: Missing Requirements', () => {
     it('should call resetBackend before generate is called', async () => {
       // Given
       const initialPrompt = '';
-      const mockFiles = [
-        { path: 'App.tsx', content: 'const App = () => <div>Hello</div>' },
-      ];
+      const mockFiles = [{ path: 'App.tsx', content: 'const App = () => <div>Hello</div>' }];
       mockGenerate.mockResolvedValue({
         message: 'Here is your app',
         files: mockFiles,
@@ -1353,7 +1397,7 @@ describe('Edge Cases: Missing Requirements', () => {
       await waitFor(() => {
         expect(mockGenerate).toHaveBeenCalled();
       });
-      
+
       // Verify resetBackend was called (the call order is implicit since
       // handleNewMessage resets state before calling generate)
       expect(mockResetBackend).toHaveBeenCalled();
@@ -1369,7 +1413,15 @@ describe('Edge Cases: Missing Requirements', () => {
         migrationName: 'initial_migration',
       };
       const mockRequirements = {
-        entities: [{ name: 'User', typeName: 'User', fields: [], confidence: 90, matchType: 'pattern' as const }],
+        entities: [
+          {
+            name: 'User',
+            typeName: 'User',
+            fields: [],
+            confidence: 90,
+            matchType: 'pattern' as const,
+          },
+        ],
         hasAuth: true,
         crudOperations: [],
         overallConfidence: 85,
@@ -1389,9 +1441,7 @@ describe('Edge Cases: Missing Requirements', () => {
         reset: mockResetBackend,
       } as any);
 
-      const mockFiles = [
-        { path: 'App.tsx', content: 'const App = () => <div>Hello</div>' },
-      ];
+      const mockFiles = [{ path: 'App.tsx', content: 'const App = () => <div>Hello</div>' }];
       mockGenerate.mockResolvedValue({
         message: 'Here is your app',
         files: mockFiles,
@@ -1439,9 +1489,7 @@ describe('Edge Cases: Missing Requirements', () => {
         reset: mockResetBackend,
       } as any);
 
-      const mockFiles = [
-        { path: 'App.tsx', content: 'const App = () => <div>New App</div>' },
-      ];
+      const mockFiles = [{ path: 'App.tsx', content: 'const App = () => <div>New App</div>' }];
       mockGenerate.mockResolvedValue({
         message: 'Here is your new app',
         files: mockFiles,
@@ -1461,81 +1509,87 @@ describe('Edge Cases: Missing Requirements', () => {
 
   describe('Error State Tracking', () => {
     it('should clear error state when user retries', async () => {
-    // Given
-    const initialPrompt = '';
-    const mockResult = {
-      projectUrl: 'https://test-project.supabase.co',
-      anonKey: 'test-anon-key-12345',
-      projectName: 'test-project',
-      migrationName: 'initial_migration',
-    };
-    const mockRequirements = {
-      entities: [{ name: 'User', typeName: 'User', fields: [], confidence: 90, matchType: 'pattern' as const }],
-      hasAuth: true,
-      crudOperations: [],
-      overallConfidence: 85,
-      analysisMethod: 'pattern' as const,
-      analyzedAt: '2024-01-01T00:00:00Z',
-    };
+      // Given
+      const initialPrompt = '';
+      const mockResult = {
+        projectUrl: 'https://test-project.supabase.co',
+        anonKey: 'test-anon-key-12345',
+        projectName: 'test-project',
+        migrationName: 'initial_migration',
+      };
+      const mockRequirements = {
+        entities: [
+          {
+            name: 'User',
+            typeName: 'User',
+            fields: [],
+            confidence: 90,
+            matchType: 'pattern' as const,
+          },
+        ],
+        hasAuth: true,
+        crudOperations: [],
+        overallConfidence: 85,
+        analysisMethod: 'pattern' as const,
+        analyzedAt: '2024-01-01T00:00:00Z',
+      };
 
-    // Mock adaptProject to return successful adaptation
-    vi.spyOn(useAdaptProjectModule, 'adaptProject').mockReturnValue({
-      files: [{ path: 'src/App.tsx', content: '// adapted' }],
-      injectedFiles: ['src/lib/supabase.ts'],
-      transformedFiles: ['src/App.tsx'],
-      skipped: false,
-    });
+      // Mock adaptProject to return successful adaptation
+      vi.spyOn(useAdaptProjectModule, 'adaptProject').mockReturnValue({
+        files: [{ path: 'src/App.tsx', content: '// adapted' }],
+        injectedFiles: ['src/lib/supabase.ts'],
+        transformedFiles: ['src/App.tsx'],
+        skipped: false,
+      });
 
-    vi.spyOn(useBackendCreationModule, 'useBackendCreation').mockReturnValue({
-      stage: PipelineStage.COMPLETE,
-      progress: 100,
-      isCreating: false,
-      error: null,
-      result: mockResult,
-      requirements: mockRequirements,
-      createBackend: mockCreateBackend,
-      retry: mockRetryBackend,
-      reset: mockResetBackend,
-    } as any);
+      vi.spyOn(useBackendCreationModule, 'useBackendCreation').mockReturnValue({
+        stage: PipelineStage.COMPLETE,
+        progress: 100,
+        isCreating: false,
+        error: null,
+        result: mockResult,
+        requirements: mockRequirements,
+        createBackend: mockCreateBackend,
+        retry: mockRetryBackend,
+        reset: mockResetBackend,
+      } as any);
 
-    // First call fails, second succeeds
-    mockMount
-      .mockRejectedValueOnce(new Error('Mount failed'))
-      .mockResolvedValueOnce(undefined);
+      // First call fails, second succeeds
+      mockMount.mockRejectedValueOnce(new Error('Mount failed')).mockResolvedValueOnce(undefined);
 
-    render(<BuilderPage initialPrompt={initialPrompt} />);
+      render(<BuilderPage initialPrompt={initialPrompt} />);
 
-    await waitFor(() => {
-      expect(screen.getByTestId('credentials-modal')).toBeDefined();
-    });
+      await waitFor(() => {
+        expect(screen.getByTestId('credentials-modal')).toBeDefined();
+      });
 
-    // First attempt - should fail
-    const applyButton = screen.getByTestId('credentials-apply-btn');
-    fireEvent.click(applyButton);
+      // First attempt - should fail
+      const applyButton = screen.getByTestId('credentials-apply-btn');
+      fireEvent.click(applyButton);
 
-    // Verify error toast was shown on first attempt
-    await waitFor(() => {
-      expect(mockShowToast).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'error',
-        })
-      );
-    });
+      // Verify error toast was shown on first attempt
+      await waitFor(() => {
+        expect(mockShowToast).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'error',
+          })
+        );
+      });
 
-    // Clear the mock for the second attempt check
-    mockShowToast.mockClear();
+      // Clear the mock for the second attempt check
+      mockShowToast.mockClear();
 
-    // Second attempt - should work (error state cleared)
-    fireEvent.click(applyButton);
+      // Second attempt - should work (error state cleared)
+      fireEvent.click(applyButton);
 
-    // On success, should show success toast
-    await waitFor(() => {
-      expect(mockShowToast).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'success',
-        })
-      );
+      // On success, should show success toast
+      await waitFor(() => {
+        expect(mockShowToast).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'success',
+          })
+        );
+      });
     });
   });
-});
 });

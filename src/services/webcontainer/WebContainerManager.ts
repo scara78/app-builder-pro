@@ -1,6 +1,7 @@
 import { WebContainer } from '@webcontainer/api';
-import { type FileSystemTree } from '../../types';
+import { type FileSystemTree, type ProjectFile } from '../../types';
 import { logInfoSafe } from '../../utils/logger';
+import { readDirRecursive } from './readDirRecursive';
 
 export class WebContainerManager {
   private static instance: WebContainerManager;
@@ -84,5 +85,14 @@ export class WebContainerManager {
     }
     const content = await this.webcontainerInstance!.fs.readFile(path);
     return new TextDecoder().decode(content);
+  }
+
+  public async readDir(dirPath?: string): Promise<ProjectFile[]> {
+    if (!this.webcontainerInstance) {
+      throw new Error('WebContainer is not booted');
+    }
+    // WC fs.readdir has multiple overloads that don't match a simple type —
+    // cast is safe because we only call readdir(path, { withFileTypes: true })
+    return readDirRecursive(this.webcontainerInstance.fs as unknown, dirPath ?? '/');
   }
 }

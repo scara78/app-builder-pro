@@ -21,6 +21,7 @@ import * as useWebContainerModule from '../../hooks/useWebContainer';
 import * as useBackendCreationModule from '../../hooks/backend/pipeline/useBackendCreation';
 import * as useSupabaseOAuthModule from '../../hooks/backend/oauth/useSupabaseOAuth';
 import * as useAdaptProjectModule from '../../services/adapter';
+import * as useFileTreeModule from '../../hooks/useFileTree';
 import { PipelineStage } from '../../hooks/backend/pipeline/types';
 
 // ===== Mock Toast System =====
@@ -103,15 +104,7 @@ vi.mock('../../components/preview/PreviewPanel', () => ({
 }));
 
 vi.mock('../../components/editor/CodeEditor', () => ({
-  default: ({
-    fileName,
-    code,
-    language,
-  }: {
-    fileName: string;
-    code: string;
-    language: string;
-  }) => (
+  default: ({ fileName, code, language }: { fileName: string; code: string; language: string }) => (
     <div data-testid="code-editor">
       <span data-testid="file-name">{fileName}</span>
       <span data-testid="code-language">{language}</span>
@@ -226,7 +219,9 @@ const mockGetToken = vi.fn().mockReturnValue('mock-oauth-token');
 // ===== Helper: Create Mock Requirements =====
 function createMockRequirements(overrides: Record<string, unknown> = {}) {
   return {
-    entities: [{ name: 'User', typeName: 'User', fields: [], confidence: 90, matchType: 'pattern' as const }],
+    entities: [
+      { name: 'User', typeName: 'User', fields: [], confidence: 90, matchType: 'pattern' as const },
+    ],
     hasAuth: true,
     crudOperations: [],
     overallConfidence: 85,
@@ -280,6 +275,13 @@ function setupDefaultMocks() {
     retry: mockRetryBackend,
     reset: mockResetBackend,
   } as unknown as ReturnType<typeof useBackendCreationModule.useBackendCreation>);
+
+  vi.spyOn(useFileTreeModule, 'useFileTree').mockReturnValue({
+    files: [],
+    isLoading: false,
+    error: null,
+    refresh: vi.fn().mockResolvedValue(undefined),
+  } as unknown as ReturnType<typeof useFileTreeModule.useFileTree>);
 }
 
 // ===== Test Suite =====
@@ -315,7 +317,10 @@ describe('E2E Backend Apply Flow', () => {
 
       // Mock successful adaptation
       vi.spyOn(useAdaptProjectModule, 'adaptProject').mockReturnValue({
-        files: [...mockFiles, { path: 'src/lib/supabaseClient.ts', content: 'export const supabase = createClient()' }],
+        files: [
+          ...mockFiles,
+          { path: 'src/lib/supabaseClient.ts', content: 'export const supabase = createClient()' },
+        ],
         injectedFiles: ['src/lib/supabaseClient.ts'],
         transformedFiles: ['App.tsx'],
         skipped: false,
@@ -350,7 +355,9 @@ describe('E2E Backend Apply Flow', () => {
       // THEN: CredentialsModal appears with projectUrl and anonKey
       await waitFor(() => {
         expect(screen.getByTestId('credentials-modal')).toBeDefined();
-        expect(screen.getByTestId('credentials-project-url').textContent).toBe('https://test-project.supabase.co');
+        expect(screen.getByTestId('credentials-project-url').textContent).toBe(
+          'https://test-project.supabase.co'
+        );
         expect(screen.getByTestId('credentials-project-name').textContent).toBe('test-project');
       });
 
@@ -408,7 +415,9 @@ describe('E2E Backend Apply Flow', () => {
       // THEN: CredentialsModal shows correct project info
       await waitFor(() => {
         expect(screen.getByTestId('credentials-modal')).toBeDefined();
-        expect(screen.getByTestId('credentials-project-url').textContent).toBe('https://my-awesome-app.supabase.co');
+        expect(screen.getByTestId('credentials-project-url').textContent).toBe(
+          'https://my-awesome-app.supabase.co'
+        );
         expect(screen.getByTestId('credentials-project-name').textContent).toBe('my-awesome-app');
         expect(screen.getByTestId('credentials-anon-key').textContent).toBe('test-anon-key-12345');
       });
@@ -455,9 +464,7 @@ describe('E2E Backend Apply Flow', () => {
 
       // THEN: Modal closes after success
       await waitFor(() => {
-        expect(mockShowToast).toHaveBeenCalledWith(
-          expect.objectContaining({ type: 'success' })
-        );
+        expect(mockShowToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'success' }));
       });
     });
   });
@@ -592,9 +599,7 @@ describe('E2E Backend Apply Flow', () => {
       } as unknown as ReturnType<typeof useBackendCreationModule.useBackendCreation>);
 
       // First call fails, second succeeds
-      mockMount
-        .mockRejectedValueOnce(new Error('Mount failed'))
-        .mockResolvedValueOnce(undefined);
+      mockMount.mockRejectedValueOnce(new Error('Mount failed')).mockResolvedValueOnce(undefined);
 
       render(<BuilderPage initialPrompt={initialPrompt} />);
 
@@ -607,9 +612,7 @@ describe('E2E Backend Apply Flow', () => {
       fireEvent.click(applyButton);
 
       await waitFor(() => {
-        expect(mockShowToast).toHaveBeenCalledWith(
-          expect.objectContaining({ type: 'error' })
-        );
+        expect(mockShowToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'error' }));
       });
 
       // Clear for second attempt
@@ -620,9 +623,7 @@ describe('E2E Backend Apply Flow', () => {
 
       // THEN: Second attempt succeeds
       await waitFor(() => {
-        expect(mockShowToast).toHaveBeenCalledWith(
-          expect.objectContaining({ type: 'success' })
-        );
+        expect(mockShowToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'success' }));
       });
     });
   });
