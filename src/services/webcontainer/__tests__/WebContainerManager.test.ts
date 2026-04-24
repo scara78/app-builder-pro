@@ -319,6 +319,58 @@ describe('WebContainerManager', () => {
     });
   });
 
+  describe('_isWriting flag', () => {
+    it('is true during writeFile execution', async () => {
+      // Given — mock fs.writeFile to capture flag state during execution
+      let flagDuringWrite: boolean | undefined;
+      mockContainer.fs.writeFile.mockImplementationOnce(async () => {
+        const manager = await WebContainerManager.getInstance();
+        flagDuringWrite = (manager as any)._isWriting;
+      });
+      const manager = await WebContainerManager.getInstance();
+
+      // When — call writeFile
+      await manager.writeFile('/src/App.tsx', 'content');
+
+      // Then — _isWriting was true while fs.writeFile was running
+      expect(flagDuringWrite).toBe(true);
+    });
+
+    it('is false after writeFile completes', async () => {
+      // Given
+      const manager = await WebContainerManager.getInstance();
+
+      // When — call writeFile
+      await manager.writeFile('/src/App.tsx', 'content');
+
+      // Then — _isWriting is false after completion
+      expect((manager as any)._isWriting).toBe(false);
+    });
+
+    it('is false after writeFile fails', async () => {
+      // Given — mock fs.writeFile to reject
+      mockContainer.fs.writeFile.mockRejectedValueOnce(new Error('Write failed'));
+      const manager = await WebContainerManager.getInstance();
+
+      // When — call writeFile (it throws)
+      await expect(manager.writeFile('/src/App.tsx', 'content')).rejects.toThrow('Write failed');
+
+      // Then — _isWriting is still false even after failure
+      expect((manager as any)._isWriting).toBe(false);
+
+      // Reset
+      mockContainer.fs.writeFile.mockResolvedValue(undefined);
+    });
+
+    it('exposes isWriting getter that returns false initially', async () => {
+      // Given
+      const manager = await WebContainerManager.getInstance();
+
+      // Then — isWriting getter returns false
+      expect(manager.isWriting).toBe(false);
+    });
+  });
+
   describe('error handling', () => {
     it('throws when boot fails', async () => {
       // Given

@@ -1,11 +1,25 @@
 import { WebContainer } from '@webcontainer/api';
+import type { IFSWatcher } from '@webcontainer/api';
 import { type FileSystemTree, type ProjectFile } from '../../types';
-import { logInfoSafe } from '../../utils/logger';
+import { logInfoSafe, logWarnSafe } from '../../utils/logger';
 import { readDirRecursive } from './readDirRecursive';
+
+/** Paths that should be excluded from watcher events (startsWith match) */
+const WATCH_EXCLUDED_PATHS = ['node_modules/', '.git/', 'dist/'];
+
+/**
+ * Decodes a filename that may be a Uint8Array (as WC API sometimes sends)
+ * into a string. Passes through string filenames unchanged.
+ */
+function decodeFilename(filename: string | Uint8Array): string {
+  if (typeof filename === 'string') return filename;
+  return new TextDecoder().decode(filename);
+}
 
 export class WebContainerManager {
   private static instance: WebContainerManager;
   private webcontainerInstance: WebContainer | null = null;
+  private _isWriting: boolean = false;
 
   private constructor() {}
 
@@ -72,11 +86,21 @@ export class WebContainerManager {
     return devProcess;
   }
 
+  /** Whether WCM is currently performing a writeFile — used by watcher to skip circular refreshes */
+  public get isWriting(): boolean {
+    return this._isWriting;
+  }
+
   public async writeFile(path: string, content: string) {
     if (!this.webcontainerInstance) {
       await this.boot();
     }
-    await this.webcontainerInstance!.fs.writeFile(path, content);
+    this._isWriting = true;
+    try {
+      await this.webcontainerInstance!.fs.writeFile(path, content);
+    } finally {
+      this._isWriting = false;
+    }
   }
 
   public async readFile(path: string): Promise<string> {
@@ -94,5 +118,48 @@ export class WebContainerManager {
     // WC fs.readdir has multiple overloads that don't match a simple type —
     // cast is safe because we only call readdir(path, { withFileTypes: true })
     return readDirRecursive(this.webcontainerInstance.fs as unknown, dirPath ?? '/');
+  }
+
+  /**
+   * Sets up a recursive filesystem watcher on the root directory.
+   * Filters out excluded paths (node_modules, .git, dist).
+   * Decodes Uint8Array filenames from WC API to strings.
+   * Returns null gracefully if the container is not booted or watch throws.
+   *
+   * @param callback — invoked with (eventType, stringFilename) on relevant changes
+   * @returns IFSWatcher with close() method, or null on failure
+   */
+  public watch(
+    callback: (event: 'rename' | 'change', filename: string) => void
+  ): IFSWatcher | null {
+    // Boot guard — return null before boot (no async, no throw)
+    if (!this.webcontainerInstance) {
+      return null;
+    }
+
+    try {
+      const watcher = this.webcontainerInstance.fs.watch(
+        '/',
+        { recursive: true },
+        (event: 'rename' | 'change', filename: string | Uint8Array) => {
+          const decodedFilename = decodeFilename(filename);
+
+          // Exclude filter — skip node_modules/, .git/, dist/ paths
+          if (WATCH_EXCLUDED_PATHS.some((prefix) => decodedFilename.startsWith(prefix))) {
+            return;
+          }
+
+          callback(event, decodedFilename);
+        }
+      );
+
+      return watcher;
+    } catch (error) {
+      logWarnSafe(
+        'WebContainer',
+        `Recursive watch failed: ${error instanceof Error ? error.message : String(error)}`
+      );
+      return null;
+    }
   }
 }

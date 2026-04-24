@@ -13,6 +13,8 @@ import { WebContainerManager } from '../../services/webcontainer/WebContainerMan
 
 const mockWebContainerManager = {
   readDir: vi.fn(),
+  watch: vi.fn().mockReturnValue({ close: vi.fn() }),
+  isWriting: false,
 };
 
 describe('useFileTree', () => {
