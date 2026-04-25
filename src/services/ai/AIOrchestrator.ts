@@ -25,7 +25,8 @@ export class AIOrchestrator {
 
   public updateConfig(apiKey: string, modelId: string) {
     // SEC-02: Only log non-sensitive configuration
-    logInfoSafe('AIOrchestrator', `Updating config: modelId=${modelId}, hasApiKey=${!!apiKey}`);
+    // SEC-AKS-002: Only log modelId — hasApiKey is an info leak
+    logInfoSafe('AIOrchestrator', `Updating config: modelId=${modelId}`);
     this.modelId = modelId;
     if (apiKey && apiKey !== this.currentApiKey) {
       this.currentApiKey = apiKey;

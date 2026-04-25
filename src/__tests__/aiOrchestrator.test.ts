@@ -249,6 +249,39 @@ export default App;
         orchestrator.updateConfig('', 'gemini-2.0-flash');
       }).not.toThrow();
     });
+
+    // SEC-AKS-002: updateConfig log SHALL NOT contain hasApiKey
+    it('log output SHALL NOT contain hasApiKey (SEC-AKS-002)', () => {
+      // Given
+      const logSpy = vi.spyOn(console, 'log');
+      const orchestrator = AIOrchestrator.getInstance();
+
+      // When
+      orchestrator.updateConfig('any-key', 'gemini-2.5-flash');
+
+      // Then — no log call should contain "hasApiKey"
+      const logCalls = logSpy.mock.calls.map((call: any[]) => call.join(' '));
+      for (const logMsg of logCalls) {
+        expect(logMsg).not.toContain('hasApiKey');
+      }
+
+      logSpy.mockRestore();
+    });
+
+    // SEC-AKS-002: updateConfig log SHALL contain modelId
+    it('log output SHALL contain modelId (SEC-AKS-002)', () => {
+      // Given
+      const logSpy = vi.spyOn(console, 'log');
+      const orchestrator = AIOrchestrator.getInstance();
+
+      // When
+      orchestrator.updateConfig('any-key', 'gemini-2.5-flash');
+
+      // Then — log should contain modelId=gemini-2.5-flash
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('modelId=gemini-2.5-flash'));
+
+      logSpy.mockRestore();
+    });
   });
 
   describe('sanitizeInput', () => {
