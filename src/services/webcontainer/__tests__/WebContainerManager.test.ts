@@ -23,6 +23,7 @@ const { mockContainer, mockBoot } = vi.hoisted(() => {
       readFile: vi.fn().mockResolvedValue(new TextEncoder().encode('file contents')),
       writeFile: vi.fn().mockResolvedValue(undefined),
       mkdir: vi.fn().mockResolvedValue(undefined),
+      rm: vi.fn().mockResolvedValue(undefined),
       readdir: vi.fn().mockResolvedValue([]),
     },
     on: vi.fn(),
@@ -442,6 +443,153 @@ describe('WebContainerManager', () => {
 
       // Reset
       mockContainer.fs.mkdir.mockResolvedValue(undefined);
+    });
+  });
+
+  describe('rm', () => {
+    it('delegates to fs.rm for file deletion', async () => {
+      // Given
+      const manager = await WebContainerManager.getInstance();
+
+      // When
+      await manager.rm('/src/utils.ts');
+
+      // Then
+      expect(mockContainer.fs.rm).toHaveBeenCalledWith('/src/utils.ts', undefined);
+    });
+
+    it('passes recursive option for folder deletion', async () => {
+      // Given
+      const manager = await WebContainerManager.getInstance();
+
+      // When
+      await manager.rm('/src/components', { recursive: true });
+
+      // Then
+      expect(mockContainer.fs.rm).toHaveBeenCalledWith('/src/components', { recursive: true });
+    });
+
+    it('passes force option for non-existent path tolerance', async () => {
+      // Given
+      const manager = await WebContainerManager.getInstance();
+
+      // When
+      await manager.rm('/maybe/missing.ts', { force: true });
+
+      // Then
+      expect(mockContainer.fs.rm).toHaveBeenCalledWith('/maybe/missing.ts', { force: true });
+    });
+
+    it('passes both recursive and force options together', async () => {
+      // Given
+      const manager = await WebContainerManager.getInstance();
+
+      // When
+      await manager.rm('/src/old-folder', { recursive: true, force: true });
+
+      // Then
+      expect(mockContainer.fs.rm).toHaveBeenCalledWith('/src/old-folder', {
+        recursive: true,
+        force: true,
+      });
+    });
+
+    it('throws "WebContainer is not booted" when not booted', async () => {
+      // Given — create a fresh WCM without booting
+      const manager = new (WebContainerManager as any)();
+
+      // When & Then
+      await expect(manager.rm('/any/path')).rejects.toThrow('WebContainer is not booted');
+    });
+
+    it('throws when not booted with exact error message', async () => {
+      // Given — create a fresh WCM without booting
+      const manager = new (WebContainerManager as any)();
+
+      // When & Then
+      try {
+        await manager.rm('/any/path');
+        expect.unreachable('Should have thrown');
+      } catch (error) {
+        expect(error).toBeInstanceOf(Error);
+        expect((error as Error).message).toBe('WebContainer is not booted');
+      }
+    });
+
+    it('sets _isWriting flag to true during rm execution', async () => {
+      // Given — mock fs.rm to capture flag state during execution
+      let flagDuringRm: boolean | undefined;
+      mockContainer.fs.rm.mockImplementationOnce(async () => {
+        const manager = await WebContainerManager.getInstance();
+        flagDuringRm = (manager as any)._isWriting;
+      });
+      const manager = await WebContainerManager.getInstance();
+
+      // When
+      await manager.rm('/src/old.ts');
+
+      // Then — _isWriting was true while fs.rm was running
+      expect(flagDuringRm).toBe(true);
+    });
+
+    it('clears _isWriting flag after rm completes', async () => {
+      // Given
+      const manager = await WebContainerManager.getInstance();
+
+      // When
+      await manager.rm('/src/old.ts');
+
+      // Then — _isWriting is false after completion
+      expect((manager as any)._isWriting).toBe(false);
+    });
+
+    it('clears _isWriting flag after rm fails', async () => {
+      // Given — mock fs.rm to reject
+      mockContainer.fs.rm.mockRejectedValueOnce(new Error('Rm failed'));
+      const manager = await WebContainerManager.getInstance();
+
+      // When — call rm (it throws)
+      await expect(manager.rm('/invalid')).rejects.toThrow('Rm failed');
+
+      // Then — _isWriting is still false even after failure
+      expect((manager as any)._isWriting).toBe(false);
+
+      // Reset
+      mockContainer.fs.rm.mockResolvedValue(undefined);
+    });
+
+    it('rejects deletion of protected path /package.json', async () => {
+      // Given
+      const manager = await WebContainerManager.getInstance();
+
+      // When & Then
+      await expect(manager.rm('/package.json')).rejects.toThrow(
+        'Cannot delete protected path: /package.json'
+      );
+      // Verify fs.rm was never called
+      expect(mockContainer.fs.rm).not.toHaveBeenCalled();
+    });
+
+    it('rejects deletion of protected path /vite.config.ts', async () => {
+      // Given
+      const manager = await WebContainerManager.getInstance();
+
+      // When & Then
+      await expect(manager.rm('/vite.config.ts')).rejects.toThrow(
+        'Cannot delete protected path: /vite.config.ts'
+      );
+      expect(mockContainer.fs.rm).not.toHaveBeenCalled();
+    });
+
+    it('rejects deletion of protected path /index.html', async () => {
+      // Given
+      const manager = await WebContainerManager.getInstance();
+
+      // When & Then
+      await expect(manager.rm('/index.html')).rejects.toThrow(
+        'Cannot delete protected path: /index.html'
+      );
+      expect(mockContainer.fs.rm).not.toHaveBeenCalled();
     });
   });
 

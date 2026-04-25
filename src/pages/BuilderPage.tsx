@@ -177,6 +177,30 @@ const BuilderPageInner: React.FC<BuilderPageProps> = ({ initialPrompt }) => {
     [fileTree, showToast]
   );
 
+  // Handler for deleting file/folder from FileExplorer (FCREAT-009)
+  const handleDeleteItem = useCallback(
+    async (item: { path: string; type: 'file' | 'folder' }) => {
+      // Clear activeFile if the deleted item matches or is a parent folder
+      if (activeFile) {
+        if (activeFile.path === item.path) {
+          setActiveFile(null);
+        } else if (activeFile.path.startsWith(item.path + '/')) {
+          setActiveFile(null);
+        }
+      }
+
+      try {
+        await fileTree.deleteItem(item.path, item.type);
+      } catch (error) {
+        showToast({
+          message: error instanceof Error ? error.message : 'Unknown error',
+          type: 'error',
+        });
+      }
+    },
+    [activeFile, fileTree, showToast]
+  );
+
   // Auto-select newly created file after tree refresh (FCREAT-005)
   useEffect(() => {
     if (!newlyCreatedPath) return;
@@ -410,6 +434,7 @@ const BuilderPageInner: React.FC<BuilderPageProps> = ({ initialPrompt }) => {
                           onFileSelect={handleFileSelect}
                           selectedPath={activeFile?.path}
                           onNewItem={handleNewItem}
+                          onDeleteItem={handleDeleteItem}
                         />
                       )}
                       <CodeEditor

@@ -602,4 +602,288 @@ describe('FileExplorer', () => {
       });
     });
   });
+
+  // ============ Phase 5: File Deletion UI (spec: FCREAT-008) ============
+  describe('File deletion — context menu', () => {
+    it('right-click on file shows context menu with Delete option', async () => {
+      const user = userEvent.setup();
+      const files = [{ path: 'src/utils.ts', content: 'export function util() {}' }];
+
+      const { container } = render(<FileExplorer files={files} />);
+
+      // Expand src to reveal the file
+      await user.click(screen.getByText('src'));
+
+      // Find the file row
+      const fileRows = container.querySelectorAll('[data-testid="item-row"][data-type="file"]');
+      const utilRow = Array.from(fileRows).find(
+        (row) => row.querySelector('[data-testid="item-name"]')?.textContent === 'utils.ts'
+      );
+      expect(utilRow).toBeDefined();
+
+      // Right-click on the file
+      await user.pointer({ keys: '[MouseRight]', target: utilRow! });
+
+      // Context menu should appear with Delete option
+      expect(screen.getByTestId('context-menu')).toBeInTheDocument();
+      expect(screen.getByTestId('context-menu-delete')).toBeInTheDocument();
+      expect(screen.getByText('Delete')).toBeInTheDocument();
+    });
+
+    it('right-click on folder shows context menu with New File, New Folder, AND Delete', async () => {
+      const user = userEvent.setup();
+      const files = [{ path: 'src/App.tsx', content: '' }];
+
+      const { container } = render(<FileExplorer files={files} />);
+
+      // Find the src folder row
+      const folderRows = container.querySelectorAll('[data-testid="item-row"][data-type="folder"]');
+      const srcRow = Array.from(folderRows).find(
+        (row) => row.querySelector('[data-testid="item-name"]')?.textContent === 'src'
+      );
+      expect(srcRow).toBeDefined();
+
+      // Right-click on the folder
+      await user.pointer({ keys: '[MouseRight]', target: srcRow! });
+
+      // Context menu should appear with all three options
+      expect(screen.getByTestId('context-menu')).toBeInTheDocument();
+      expect(screen.getByTestId('context-menu-new-file')).toBeInTheDocument();
+      expect(screen.getByTestId('context-menu-new-folder')).toBeInTheDocument();
+      expect(screen.getByTestId('context-menu-delete')).toBeInTheDocument();
+    });
+
+    it('file context menu shows only Delete (no New File / New Folder)', async () => {
+      const user = userEvent.setup();
+      const files = [{ path: 'src/utils.ts', content: '' }];
+
+      const { container } = render(<FileExplorer files={files} />);
+
+      // Expand src to reveal the file
+      await user.click(screen.getByText('src'));
+
+      // Right-click on the file
+      const fileRows = container.querySelectorAll('[data-testid="item-row"][data-type="file"]');
+      const utilRow = Array.from(fileRows).find(
+        (row) => row.querySelector('[data-testid="item-name"]')?.textContent === 'utils.ts'
+      );
+      await user.pointer({ keys: '[MouseRight]', target: utilRow! });
+
+      // Context menu has Delete but NOT New File / New Folder
+      expect(screen.getByTestId('context-menu-delete')).toBeInTheDocument();
+      expect(screen.queryByTestId('context-menu-new-file')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('context-menu-new-folder')).not.toBeInTheDocument();
+    });
+
+    it('Delete context-menu item has danger CSS class', async () => {
+      const user = userEvent.setup();
+      const files = [{ path: 'src/utils.ts', content: '' }];
+
+      const { container } = render(<FileExplorer files={files} />);
+
+      await user.click(screen.getByText('src'));
+
+      const fileRows = container.querySelectorAll('[data-testid="item-row"][data-type="file"]');
+      const utilRow = Array.from(fileRows).find(
+        (row) => row.querySelector('[data-testid="item-name"]')?.textContent === 'utils.ts'
+      );
+      await user.pointer({ keys: '[MouseRight]', target: utilRow! });
+
+      const deleteItem = screen.getByTestId('context-menu-delete');
+      expect(deleteItem.classList.contains('context-menu-item--danger')).toBe(true);
+    });
+  });
+
+  describe('File deletion — confirmation dialog', () => {
+    it('clicking Delete in context menu opens confirmation dialog', async () => {
+      const user = userEvent.setup();
+      const files = [{ path: 'src/utils.ts', content: '' }];
+
+      const { container } = render(<FileExplorer files={files} />);
+
+      await user.click(screen.getByText('src'));
+
+      // Right-click on file
+      const fileRows = container.querySelectorAll('[data-testid="item-row"][data-type="file"]');
+      const utilRow = Array.from(fileRows).find(
+        (row) => row.querySelector('[data-testid="item-name"]')?.textContent === 'utils.ts'
+      );
+      await user.pointer({ keys: '[MouseRight]', target: utilRow! });
+
+      // Click Delete in context menu
+      await user.click(screen.getByTestId('context-menu-delete'));
+
+      // Confirmation dialog should appear
+      expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument();
+    });
+
+    it('confirmation dialog shows item name for file deletion', async () => {
+      const user = userEvent.setup();
+      const files = [{ path: 'src/utils.ts', content: '' }];
+
+      const { container } = render(<FileExplorer files={files} />);
+
+      await user.click(screen.getByText('src'));
+
+      const fileRows = container.querySelectorAll('[data-testid="item-row"][data-type="file"]');
+      const utilRow = Array.from(fileRows).find(
+        (row) => row.querySelector('[data-testid="item-name"]')?.textContent === 'utils.ts'
+      );
+      await user.pointer({ keys: '[MouseRight]', target: utilRow! });
+      await user.click(screen.getByTestId('context-menu-delete'));
+
+      // Dialog should mention the file name
+      expect(screen.getByTestId('confirm-dialog-message').textContent).toContain('utils.ts');
+    });
+
+    it('confirmation dialog warns about recursive deletion for folders', async () => {
+      const user = userEvent.setup();
+      const files = [{ path: 'src/components/Button.tsx', content: '' }];
+
+      const { container } = render(<FileExplorer files={files} />);
+
+      // Find the components folder row (need to expand src first)
+      await user.click(screen.getByText('src'));
+
+      const folderRows = container.querySelectorAll('[data-testid="item-row"][data-type="folder"]');
+      const componentsRow = Array.from(folderRows).find(
+        (row) => row.querySelector('[data-testid="item-name"]')?.textContent === 'components'
+      );
+      expect(componentsRow).toBeDefined();
+
+      await user.pointer({ keys: '[MouseRight]', target: componentsRow! });
+      await user.click(screen.getByTestId('context-menu-delete'));
+
+      // Dialog should warn about folder contents
+      const message = screen.getByTestId('confirm-dialog-message').textContent;
+      expect(message).toContain('contents');
+      expect(message).toContain('cannot be undone');
+    });
+
+    it('confirming file deletion calls onDeleteItem with path and type file', async () => {
+      const user = userEvent.setup();
+      const onDeleteItem = vi.fn();
+      const files = [{ path: 'src/utils.ts', content: '' }];
+
+      const { container } = render(<FileExplorer files={files} onDeleteItem={onDeleteItem} />);
+
+      await user.click(screen.getByText('src'));
+
+      const fileRows = container.querySelectorAll('[data-testid="item-row"][data-type="file"]');
+      const utilRow = Array.from(fileRows).find(
+        (row) => row.querySelector('[data-testid="item-name"]')?.textContent === 'utils.ts'
+      );
+      await user.pointer({ keys: '[MouseRight]', target: utilRow! });
+      await user.click(screen.getByTestId('context-menu-delete'));
+
+      // Click Confirm
+      await user.click(screen.getByTestId('confirm-dialog-confirm'));
+
+      expect(onDeleteItem).toHaveBeenCalledTimes(1);
+      expect(onDeleteItem).toHaveBeenCalledWith({ path: 'src/utils.ts', type: 'file' });
+    });
+
+    it('confirming folder deletion calls onDeleteItem with path and type folder', async () => {
+      const user = userEvent.setup();
+      const onDeleteItem = vi.fn();
+      const files = [{ path: 'src/components/Button.tsx', content: '' }];
+
+      const { container } = render(<FileExplorer files={files} onDeleteItem={onDeleteItem} />);
+
+      await user.click(screen.getByText('src'));
+
+      const folderRows = container.querySelectorAll('[data-testid="item-row"][data-type="folder"]');
+      const componentsRow = Array.from(folderRows).find(
+        (row) => row.querySelector('[data-testid="item-name"]')?.textContent === 'components'
+      );
+
+      await user.pointer({ keys: '[MouseRight]', target: componentsRow! });
+      await user.click(screen.getByTestId('context-menu-delete'));
+
+      // Click Confirm
+      await user.click(screen.getByTestId('confirm-dialog-confirm'));
+
+      expect(onDeleteItem).toHaveBeenCalledTimes(1);
+      expect(onDeleteItem).toHaveBeenCalledWith({ path: 'src/components', type: 'folder' });
+    });
+
+    it('canceling confirmation dialog does not call onDeleteItem', async () => {
+      const user = userEvent.setup();
+      const onDeleteItem = vi.fn();
+      const files = [{ path: 'src/utils.ts', content: '' }];
+
+      const { container } = render(<FileExplorer files={files} onDeleteItem={onDeleteItem} />);
+
+      await user.click(screen.getByText('src'));
+
+      const fileRows = container.querySelectorAll('[data-testid="item-row"][data-type="file"]');
+      const utilRow = Array.from(fileRows).find(
+        (row) => row.querySelector('[data-testid="item-name"]')?.textContent === 'utils.ts'
+      );
+      await user.pointer({ keys: '[MouseRight]', target: utilRow! });
+      await user.click(screen.getByTestId('context-menu-delete'));
+
+      // Click Cancel
+      await user.click(screen.getByTestId('confirm-dialog-cancel'));
+
+      expect(onDeleteItem).not.toHaveBeenCalled();
+      // Dialog should close
+      expect(screen.queryByTestId('confirm-dialog')).not.toBeInTheDocument();
+    });
+
+    it('confirmation dialog is rendered via portal to document.body', async () => {
+      const user = userEvent.setup();
+      const files = [{ path: 'src/utils.ts', content: '' }];
+
+      const { container } = render(<FileExplorer files={files} />);
+
+      await user.click(screen.getByText('src'));
+
+      const fileRows = container.querySelectorAll('[data-testid="item-row"][data-type="file"]');
+      const utilRow = Array.from(fileRows).find(
+        (row) => row.querySelector('[data-testid="item-name"]')?.textContent === 'utils.ts'
+      );
+      await user.pointer({ keys: '[MouseRight]', target: utilRow! });
+      await user.click(screen.getByTestId('context-menu-delete'));
+
+      // The confirm dialog should be in document.body, NOT inside the FileExplorer container
+      const dialogInBody = document.body.querySelector('[data-testid="confirm-dialog"]');
+      const dialogInExplorer = container.querySelector('[data-testid="confirm-dialog"]');
+      expect(dialogInBody).not.toBeNull();
+      expect(dialogInExplorer).toBeNull();
+    });
+
+    it('clicking backdrop cancels the dialog', async () => {
+      const user = userEvent.setup();
+      const onDeleteItem = vi.fn();
+      const files = [{ path: 'src/utils.ts', content: '' }];
+
+      const { container } = render(<FileExplorer files={files} onDeleteItem={onDeleteItem} />);
+
+      await user.click(screen.getByText('src'));
+
+      const fileRows = container.querySelectorAll('[data-testid="item-row"][data-type="file"]');
+      const utilRow = Array.from(fileRows).find(
+        (row) => row.querySelector('[data-testid="item-name"]')?.textContent === 'utils.ts'
+      );
+      expect(utilRow).toBeDefined();
+
+      await user.pointer({ keys: '[MouseRight]', target: utilRow! });
+
+      // Click Delete in context menu
+      const deleteBtn = screen.queryByTestId('context-menu-delete');
+      if (deleteBtn) {
+        await user.click(deleteBtn);
+      }
+
+      // Click backdrop to cancel
+      const backdrop = document.body.querySelector('[data-testid="confirm-dialog-backdrop"]');
+      if (backdrop) {
+        await user.click(backdrop as Element);
+      }
+
+      // onDeleteItem should not have been called
+      expect(onDeleteItem).not.toHaveBeenCalled();
+    });
+  });
 });

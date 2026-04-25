@@ -7,6 +7,9 @@ import { readDirRecursive } from './readDirRecursive';
 /** Paths that should be excluded from watcher events (startsWith match) */
 const WATCH_EXCLUDED_PATHS = ['node_modules/', '.git/', 'dist/'];
 
+/** Paths that cannot be deleted — critical project files */
+export const PROTECTED_PATHS = ['/package.json', '/vite.config.ts', '/index.html'];
+
 /**
  * Decodes a filename that may be a Uint8Array (as WC API sometimes sends)
  * into a string. Passes through string filenames unchanged.
@@ -103,20 +106,38 @@ export class WebContainerManager {
     }
   }
 
-  public async mkdir(dirPath: string, options?: { recursive?: boolean }): Promise<void> {
+  /** Throws if the WebContainer instance is not booted — used by methods that require a booted WC and cannot auto-boot */
+  private requireBooted(): void {
     if (!this.webcontainerInstance) {
       throw new Error('WebContainer is not booted');
     }
+  }
+
+  public async mkdir(dirPath: string, options?: { recursive?: boolean }): Promise<void> {
+    this.requireBooted();
     this._isWriting = true;
     try {
       logInfoSafe('WebContainer', `Creating directory: ${dirPath}`);
       // WC fs.mkdir has overloads: recursive:true → Promise<string>, otherwise → Promise<void>
       // We always want void behavior, so handle the overload explicitly
       if (options?.recursive) {
-        await this.webcontainerInstance.fs.mkdir(dirPath, { recursive: true });
+        await this.webcontainerInstance!.fs.mkdir(dirPath, { recursive: true });
       } else {
-        await this.webcontainerInstance.fs.mkdir(dirPath);
+        await this.webcontainerInstance!.fs.mkdir(dirPath);
       }
+    } finally {
+      this._isWriting = false;
+    }
+  }
+
+  public async rm(path: string, options?: { recursive?: boolean; force?: boolean }): Promise<void> {
+    this.requireBooted();
+    if (PROTECTED_PATHS.includes(path)) {
+      throw new Error(`Cannot delete protected path: ${path}`);
+    }
+    this._isWriting = true;
+    try {
+      await this.webcontainerInstance!.fs.rm(path, options);
     } finally {
       this._isWriting = false;
     }
@@ -131,12 +152,10 @@ export class WebContainerManager {
   }
 
   public async readDir(dirPath?: string): Promise<ProjectFile[]> {
-    if (!this.webcontainerInstance) {
-      throw new Error('WebContainer is not booted');
-    }
+    this.requireBooted();
     // WC fs.readdir has multiple overloads that don't match a simple type —
     // cast is safe because we only call readdir(path, { withFileTypes: true })
-    return readDirRecursive(this.webcontainerInstance.fs as unknown, dirPath ?? '/');
+    return readDirRecursive(this.webcontainerInstance!.fs as unknown, dirPath ?? '/');
   }
 
   /**

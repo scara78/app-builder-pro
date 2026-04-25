@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { WebContainerManager } from '../services/webcontainer/WebContainerManager';
+import { WebContainerManager, PROTECTED_PATHS } from '../services/webcontainer/WebContainerManager';
 import { logWarnSafe } from '../utils/logger';
 import type { IFSWatcher } from '@webcontainer/api';
 import type { ProjectFile } from '../types';
@@ -14,6 +14,7 @@ export interface UseFileTreeReturn {
   refresh: () => Promise<void>;
   createFile: (fullPath: string) => Promise<string>;
   createFolder: (fullPath: string) => Promise<string>;
+  deleteItem: (fullPath: string, type: 'file' | 'folder') => Promise<void>;
 }
 
 export function useFileTree(): UseFileTreeReturn {
@@ -25,6 +26,7 @@ export function useFileTree(): UseFileTreeReturn {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wcmRef = useRef<WebContainerManager | null>(null);
   const creatingPathRef = useRef<string | null>(null);
+  const deletingPathRef = useRef<string | null>(null);
 
   const loadFiles = useCallback(async () => {
     try {
@@ -211,5 +213,36 @@ export function useFileTree(): UseFileTreeReturn {
     [files, validateCreationPath]
   );
 
-  return { files, isLoading, error, refresh, createFile, createFolder };
+  const deleteItem = useCallback(
+    async (fullPath: string, type: 'file' | 'folder'): Promise<void> => {
+      // Protected paths validation — defense in depth (WCM also checks)
+      if (PROTECTED_PATHS.includes(fullPath)) {
+        throw new Error(`Cannot delete protected path: ${fullPath}`);
+      }
+
+      const wcm = wcmRef.current;
+      if (!wcm) {
+        throw new Error('WebContainer is not ready');
+      }
+
+      deletingPathRef.current = fullPath;
+
+      try {
+        if (type === 'folder') {
+          await wcm.rm(fullPath, { recursive: true });
+        } else {
+          await wcm.rm(fullPath);
+        }
+      } catch (err) {
+        logWarnSafe('useFileTree', `Failed to delete "${fullPath}": ${(err as Error).message}`);
+        setError(err as Error);
+        throw err;
+      } finally {
+        deletingPathRef.current = null;
+      }
+    },
+    []
+  );
+
+  return { files, isLoading, error, refresh, createFile, createFolder, deleteItem };
 }

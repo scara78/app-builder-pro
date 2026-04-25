@@ -22,6 +22,7 @@ interface FileExplorerProps {
   onFileSelect?: (path: string, content: string) => void;
   selectedPath?: string;
   onNewItem?: (item: { parentPath: string; name: string; type: 'file' | 'folder' }) => void;
+  onDeleteItem?: (item: { path: string; type: 'file' | 'folder' }) => void;
 }
 
 interface TreeNode {
@@ -104,6 +105,13 @@ function buildTree(
   return root;
 }
 
+interface ConfirmDialogState {
+  isOpen: boolean;
+  itemPath: string;
+  itemType: 'file' | 'folder';
+  itemName: string;
+}
+
 const FileExplorer: React.FC<FileExplorerProps> = ({
   files = [],
   isLoading,
@@ -112,6 +120,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
   onFileSelect,
   selectedPath,
   onNewItem,
+  onDeleteItem,
 }) => {
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
   const [creatingInPath, setCreatingInPath] = useState<string | null>(null);
@@ -120,7 +129,15 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
     x: number;
     y: number;
     folderPath: string;
+    itemType?: 'file' | 'folder';
+    itemName?: string;
   } | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState>({
+    isOpen: false,
+    itemPath: '',
+    itemType: 'file',
+    itemName: '',
+  });
   const [creatingValue, setCreatingValue] = useState('');
   const creatingInputRef = useRef<HTMLInputElement>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
@@ -192,10 +209,37 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
     setCreatingValue('');
   };
 
-  const handleContextMenu = (e: React.MouseEvent, folderPath: string) => {
+  const handleContextMenu = (
+    e: React.MouseEvent,
+    itemPath: string,
+    itemType: 'file' | 'folder',
+    itemName: string
+  ) => {
     e.preventDefault();
     e.stopPropagation();
-    setContextMenu({ x: e.clientX, y: e.clientY, folderPath });
+    setContextMenu({ x: e.clientX, y: e.clientY, folderPath: itemPath, itemType, itemName });
+  };
+
+  const handleDeleteClick = () => {
+    if (!contextMenu) return;
+    setConfirmDialog({
+      isOpen: true,
+      itemPath: contextMenu.folderPath,
+      itemType: contextMenu.itemType ?? 'file',
+      itemName: contextMenu.itemName ?? '',
+    });
+    setContextMenu(null);
+  };
+
+  const handleConfirmDelete = () => {
+    if (confirmDialog.isOpen && onDeleteItem) {
+      onDeleteItem({ path: confirmDialog.itemPath, type: confirmDialog.itemType });
+    }
+    setConfirmDialog({ isOpen: false, itemPath: '', itemType: 'file', itemName: '' });
+  };
+
+  const handleCancelDelete = () => {
+    setConfirmDialog({ isOpen: false, itemPath: '', itemType: 'file', itemName: '' });
   };
 
   const renderTree = (
@@ -259,8 +303,8 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
                   ? () => onFileSelect(fullPath, item.content ?? '')
                   : undefined
             }
-            onContextMenu={
-              item.type === 'folder' ? (e) => handleContextMenu(e, fullPath) : undefined
+            onContextMenu={(e) =>
+              handleContextMenu(e, fullPath, item.type as 'file' | 'folder', item.name)
             }
             style={item.type === 'folder' ? { cursor: 'pointer' } : undefined}
           >
@@ -339,27 +383,80 @@ const FileExplorer: React.FC<FileExplorerProps> = ({
             data-testid="context-menu"
             style={{ top: contextMenu.y, left: contextMenu.x }}
           >
+            {contextMenu.itemType === 'folder' && (
+              <>
+                <div
+                  className="context-menu-item"
+                  data-testid="context-menu-new-file"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleStartCreating(contextMenu.folderPath, 'file');
+                    setContextMenu(null);
+                  }}
+                >
+                  New File
+                </div>
+                <div
+                  className="context-menu-item"
+                  data-testid="context-menu-new-folder"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleStartCreating(contextMenu.folderPath, 'folder');
+                    setContextMenu(null);
+                  }}
+                >
+                  New Folder
+                </div>
+              </>
+            )}
             <div
-              className="context-menu-item"
-              data-testid="context-menu-new-file"
+              className="context-menu-item context-menu-item--danger"
+              data-testid="context-menu-delete"
               onClick={(e) => {
                 e.stopPropagation();
-                handleStartCreating(contextMenu.folderPath, 'file');
-                setContextMenu(null);
+                handleDeleteClick();
               }}
             >
-              New File
+              Delete
             </div>
+          </div>,
+          document.body
+        )}
+
+      {confirmDialog.isOpen &&
+        createPortal(
+          <div
+            className="confirm-dialog-backdrop"
+            data-testid="confirm-dialog-backdrop"
+            onClick={handleCancelDelete}
+          >
             <div
-              className="context-menu-item"
-              data-testid="context-menu-new-folder"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleStartCreating(contextMenu.folderPath, 'folder');
-                setContextMenu(null);
-              }}
+              className="confirm-dialog"
+              data-testid="confirm-dialog"
+              onClick={(e) => e.stopPropagation()}
             >
-              New Folder
+              <div className="confirm-dialog__title">Confirm Deletion</div>
+              <div className="confirm-dialog__message" data-testid="confirm-dialog-message">
+                {confirmDialog.itemType === 'folder'
+                  ? `Delete ${confirmDialog.itemName} and all its contents? This action cannot be undone.`
+                  : `Delete ${confirmDialog.itemName}?`}
+              </div>
+              <div className="confirm-dialog__actions">
+                <button
+                  className="confirm-dialog__cancel"
+                  data-testid="confirm-dialog-cancel"
+                  onClick={handleCancelDelete}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="confirm-dialog__confirm confirm-dialog__confirm--danger"
+                  data-testid="confirm-dialog-confirm"
+                  onClick={handleConfirmDelete}
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           </div>,
           document.body

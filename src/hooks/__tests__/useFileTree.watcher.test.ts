@@ -227,4 +227,56 @@ describe('useFileTree — watcher subscription', () => {
 
     expect(result.current.files).toEqual([{ path: 'src/App.tsx', content: 'v2' }]);
   });
+
+  // -------------------------------------------------------
+  // FCREAT-002: creatingPath survives watcher refresh
+  // When a file creation is in progress (isWriting=true),
+  // a watcher event should NOT trigger loadFiles, ensuring
+  // the creation flow completes without interruption.
+  // -------------------------------------------------------
+  it('does not refresh during file creation — isWriting blocks watcher refresh', async () => {
+    // Given — initial load completes
+    mockWebContainerManager.readDir.mockResolvedValue([{ path: 'src/App.tsx', content: '' }]);
+    const { result } = renderHook(() => useFileTree());
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    mockWebContainerManager.readDir.mockClear();
+
+    // When — simulate isWriting=true (as during createFile/createFolder)
+    mockWebContainerManager.isWriting = true;
+
+    // Fire a watcher event and advance past debounce
+    const watchCallback = mockWebContainerManager.watch.mock.calls[0][0] as (
+      event: 'rename' | 'change',
+      filename: string
+    ) => void;
+    watchCallback('rename', 'src/NewFile.tsx');
+
+    act(() => {
+      vi.advanceTimersByTime(350);
+    });
+
+    // Then — loadFiles was NOT called during the write operation
+    expect(mockWebContainerManager.readDir).not.toHaveBeenCalled();
+
+    // And — after isWriting returns to false, a new watcher event DOES refresh
+    mockWebContainerManager.isWriting = false;
+    mockWebContainerManager.readDir.mockResolvedValue([
+      { path: 'src/App.tsx', content: '' },
+      { path: 'src/NewFile.tsx', content: '' },
+    ]);
+
+    watchCallback('rename', 'src/NewFile.tsx');
+
+    await act(async () => {
+      vi.advanceTimersByTime(350);
+      await new Promise((r) => setTimeout(r, 10));
+    });
+
+    // Now loadFiles IS called (the refresh that was blocked during creation)
+    expect(mockWebContainerManager.readDir).toHaveBeenCalledTimes(1);
+  });
 });
