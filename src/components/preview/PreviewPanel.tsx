@@ -11,6 +11,7 @@ interface PreviewPanelProps {
 const PreviewPanel: React.FC<PreviewPanelProps> = ({ state, url }) => {
   const [hasError, setHasError] = useState(false);
   const isLoading = state === 'generating' || state === 'installing';
+  const isError = state === 'error';
   const isRunning = state === 'running' && url;
 
   return (
@@ -48,6 +49,11 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({ state, url }) => {
               <h3>{state === 'generating' ? 'Writing Code...' : 'Installing Dependencies...'}</h3>
               <p>Magic is happening in the background.</p>
             </div>
+          </div>
+        ) : isError ? (
+          <div className="preview-error">
+            <div className="error-icon">!</div>
+            <p>Unable to load preview</p>
           </div>
         ) : isRunning ? (
           hasError ? (
