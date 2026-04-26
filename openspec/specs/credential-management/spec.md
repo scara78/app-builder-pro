@@ -75,4 +75,18 @@ The system SHALL provide documentation for credential rotation process including
 #### Scenario: Affected services are listed
 - GIVEN credential rotation documentation
 - WHEN reviewed
-- THEN it lists all services requiring credentials (Gemini API, Supabase) with their respective rotation procedures
+- THEN it lists all services requiring credentials (Gemini API, Supabase, Vercel) with their respective rotation procedures
+
+### Requirement: Vercel OAuth Token in Credential Lifecycle
+The system SHALL include Vercel OAuth access tokens in the in-memory credential lifecycle. When user logs out from Vercel, the token MUST be cleared from memory. The `.env.example` file MUST include `VITE_VERCEL_CLIENT_ID` and `VITE_VERCEL_REDIRECT_URI` placeholder entries.
+
+#### Scenario: Vercel env vars in .env.example
+- GIVEN `.env.example` file
+- WHEN reviewed
+- THEN it contains `VITE_VERCEL_CLIENT_ID=your-vercel-client-id-here` and `VITE_VERCEL_REDIRECT_URI=http://localhost:5173/oauth/vercel/callback`
+
+#### Scenario: Vercel token cleared on logout
+- GIVEN user has Vercel OAuth token in memory
+- WHEN user logs out from Vercel
+- THEN token is removed from in-memory storage
+- AND subsequent API calls return unauthenticated status

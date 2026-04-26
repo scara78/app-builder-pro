@@ -9,6 +9,8 @@ import ConsolePanel from '../components/common/ConsolePanel';
 import BuildErrorPanel from '../components/common/BuildErrorPanel';
 import BackendCreationModal from '../components/backend/BackendCreationModal';
 import CredentialsModal from '../components/backend/CredentialsModal';
+import DeployModal from '../components/deploy/DeployModal';
+import DeploySuccess from '../components/deploy/DeploySuccess';
 import { ToastProvider, useToast } from '../components/common/Toast';
 import { type ChatMessage, type BuilderState, type ProjectFile } from '../types';
 import { filesToTree } from '../services/webcontainer/fileSystem';
@@ -19,6 +21,8 @@ import { useConsoleLogs } from '../hooks/useConsoleLogs';
 import { useFileTree } from '../hooks/useFileTree';
 import { useBackendCreation } from '../hooks/backend/pipeline/useBackendCreation';
 import { useSupabaseOAuth } from '../hooks/backend/oauth/useSupabaseOAuth';
+import { useVercelOAuth, useVercelDeploy } from '../hooks/deploy';
+import { DeployStage } from '../hooks/deploy/types';
 import { adaptProject } from '../services/adapter';
 import SettingsModal from '../components/settings/SettingsModal';
 import { PipelineStage } from '../hooks/backend/pipeline/types';
@@ -70,6 +74,30 @@ const BuilderPageInner: React.FC<BuilderPageProps> = ({ initialPrompt }) => {
     retry: retryBackend,
     reset: resetBackend,
   } = useBackendCreation();
+
+  // Vercel deploy hooks
+  const {
+    isAuthenticated: isVercelAuthenticated,
+    status: vercelOAuthStatus,
+    error: _vercelOAuthError,
+    login: vercelLogin,
+    exchangeCode: vercelExchangeCode,
+  } = useVercelOAuth();
+  const {
+    stage: deployStage,
+    progress: deployProgress,
+    isDeploying,
+    error: deployError,
+    result: deployResult,
+    deploy: vercelDeploy,
+    retry: retryDeploy,
+    reset: resetDeploy,
+    abort: abortDeploy,
+  } = useVercelDeploy();
+
+  // Deploy modal state
+  const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
+  const [showDeploySuccess, setShowDeploySuccess] = useState(false);
 
   // Ref to track if initial prompt was already processed
   const initialPromptProcessed = useRef(false);
@@ -264,6 +292,72 @@ const BuilderPageInner: React.FC<BuilderPageProps> = ({ initialPrompt }) => {
     }
   }, [backendStage, backendResult, showCredentialsModal]);
 
+  // ====== Vercel Deploy Handlers ======
+
+  // Handle OAuth callback: detect `code` param in URL after Vercel redirect
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    if (code && vercelOAuthStatus === 'idle') {
+      vercelExchangeCode(code);
+      // Clean up URL params
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [vercelOAuthStatus, vercelExchangeCode]);
+
+  // Handler for "Deploy to Vercel" button click
+  const handleDeployClick = useCallback(() => {
+    if (!isVercelAuthenticated) {
+      // Not authenticated — trigger Vercel OAuth login
+      vercelLogin();
+      return;
+    }
+    // Open deploy modal and start deployment
+    setIsDeployModalOpen(true);
+  }, [isVercelAuthenticated, vercelLogin]);
+
+  // Start deployment when deploy modal opens
+  useEffect(() => {
+    if (
+      isDeployModalOpen &&
+      !isDeploying &&
+      deployStage === DeployStage.IDLE &&
+      currentFiles.length > 0
+    ) {
+      vercelDeploy(currentFiles, { projectName: 'generated-app' });
+    }
+  }, [isDeployModalOpen, isDeploying, deployStage, currentFiles, vercelDeploy]);
+
+  // Handle deploy completion — show DeploySuccess
+  useEffect(() => {
+    if (deployStage === DeployStage.COMPLETE && deployResult && !showDeploySuccess) {
+      setIsDeployModalOpen(false);
+      setShowDeploySuccess(true);
+    }
+  }, [deployStage, deployResult, showDeploySuccess]);
+
+  // Handler for closing deploy modal
+  const handleCloseDeployModal = useCallback(() => {
+    setIsDeployModalOpen(false);
+    resetDeploy();
+  }, [resetDeploy]);
+
+  // Handler for retrying deploy
+  const handleRetryDeploy = useCallback(() => {
+    retryDeploy();
+  }, [retryDeploy]);
+
+  // Handler for aborting deploy
+  const handleAbortDeploy = useCallback(() => {
+    abortDeploy();
+  }, [abortDeploy]);
+
+  // Handler for closing deploy success
+  const handleCloseDeploySuccess = useCallback(() => {
+    setShowDeploySuccess(false);
+    resetDeploy();
+  }, [resetDeploy]);
+
   // Handler for closing CredentialsModal
   const handleCloseCredentialsModal = useCallback(() => {
     setShowCredentialsModal(false);
@@ -372,6 +466,9 @@ const BuilderPageInner: React.FC<BuilderPageProps> = ({ initialPrompt }) => {
         hasOAuthToken={isAuthenticated}
         isCreatingBackend={isCreatingBackend}
         onCreateBackend={handleOpenBackendModal}
+        isVercelAuthenticated={isVercelAuthenticated}
+        isDeploying={isDeploying}
+        onDeploy={handleDeployClick}
       />
 
       <main className="builder-main">
@@ -472,6 +569,20 @@ const BuilderPageInner: React.FC<BuilderPageProps> = ({ initialPrompt }) => {
           onApply={handleApplyBackend}
           isApplying={isApplying}
         />
+      )}
+      {isDeployModalOpen && (
+        <DeployModal
+          stage={deployStage}
+          progress={deployProgress}
+          error={deployError}
+          isDeploying={isDeploying}
+          onRetry={handleRetryDeploy}
+          onClose={handleCloseDeployModal}
+          onAbort={handleAbortDeploy}
+        />
+      )}
+      {showDeploySuccess && deployResult && (
+        <DeploySuccess result={deployResult} onDone={handleCloseDeploySuccess} />
       )}
     </div>
   );

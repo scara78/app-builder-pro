@@ -1,5 +1,14 @@
 import React from 'react';
-import { Sparkles, Share2, Play, Settings, ChevronDown, Rocket, Database, Loader2 } from 'lucide-react';
+import {
+  Sparkles,
+  Share2,
+  Settings,
+  ChevronDown,
+  Rocket,
+  Database,
+  Loader2,
+  Cloud,
+} from 'lucide-react';
 import { type BuilderState } from '../../types';
 import { QuotaStatus } from './QuotaStatus';
 import './TopBar.css';
@@ -16,6 +25,12 @@ interface TopBarProps {
   isCreatingBackend?: boolean;
   /** Callback when "Create Backend" button is clicked */
   onCreateBackend?: () => void;
+  /** Whether user is authenticated with Vercel OAuth */
+  isVercelAuthenticated?: boolean;
+  /** Whether Vercel deployment is in progress */
+  isDeploying?: boolean;
+  /** Callback when "Deploy to Vercel" button is clicked */
+  onDeploy?: () => void;
 }
 
 const TopBar: React.FC<TopBarProps> = ({
@@ -26,10 +41,13 @@ const TopBar: React.FC<TopBarProps> = ({
   hasOAuthToken = false,
   isCreatingBackend = false,
   onCreateBackend,
+  isVercelAuthenticated = false,
+  isDeploying = false,
+  onDeploy,
 }) => {
   const isGenerating = state === 'generating' || state === 'installing';
 
-  // Determine button state
+  // Determine backend button state
   const isButtonDisabled = !hasOAuthToken || !hasGeneratedCode || isCreatingBackend;
   const buttonTooltip = !hasGeneratedCode
     ? 'Generate code first'
@@ -38,6 +56,16 @@ const TopBar: React.FC<TopBarProps> = ({
       : isCreatingBackend
         ? 'Creating backend...'
         : 'Create Supabase backend';
+
+  // Determine deploy button state
+  const isDeployDisabled = !hasGeneratedCode || isDeploying;
+  const deployTooltip = !hasGeneratedCode
+    ? 'Generate code first'
+    : isDeploying
+      ? 'Deploying to Vercel...'
+      : !isVercelAuthenticated
+        ? 'Login with Vercel to deploy'
+        : 'Deploy to Vercel';
 
   return (
     <header className="topbar">
@@ -80,11 +108,7 @@ const TopBar: React.FC<TopBarProps> = ({
           title={buttonTooltip}
           data-testid="btn-create-backend"
         >
-          {isCreatingBackend ? (
-            <Loader2 size={16} className="icon-spin" />
-          ) : (
-            <Database size={16} />
-          )}
+          {isCreatingBackend ? <Loader2 size={16} className="icon-spin" /> : <Database size={16} />}
           <span>{isCreatingBackend ? 'Creating...' : 'Create Backend'}</span>
         </button>
 
@@ -92,9 +116,15 @@ const TopBar: React.FC<TopBarProps> = ({
           <Share2 size={18} />
           <span>Share</span>
         </button>
-        <button className="btn-secondary">
-          <Play size={16} />
-          <span>Deploy</span>
+        <button
+          className={`btn-secondary ${isDeploying ? 'loading' : ''}`}
+          onClick={onDeploy}
+          disabled={isDeployDisabled}
+          title={deployTooltip}
+          data-testid="btn-deploy-vercel"
+        >
+          {isDeploying ? <Loader2 size={16} className="icon-spin" /> : <Cloud size={16} />}
+          <span>{isDeploying ? 'Deploying...' : 'Deploy'}</span>
         </button>
         <button className="btn-accent">
           <Rocket size={16} />

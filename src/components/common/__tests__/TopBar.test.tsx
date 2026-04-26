@@ -18,6 +18,7 @@ vi.mock('lucide-react', () => ({
   Rocket: () => <span data-testid="icon-rocket">Rocket</span>,
   Database: () => <span data-testid="icon-database">Database</span>,
   Loader2: () => <span data-testid="icon-loader">Loader</span>,
+  Cloud: () => <span data-testid="icon-cloud">Cloud</span>,
 }));
 
 // Mock QuotaStatus component
@@ -37,45 +38,33 @@ describe('TopBar', () => {
 
   describe('Create Backend Button - Disabled States', () => {
     it('should be disabled when no code has been generated (hasGeneratedCode=false)', () => {
-      render(
-        <TopBar
-          {...defaultProps}
-          hasGeneratedCode={false}
-          hasOAuthToken={true}
-        />
-      );
+      render(<TopBar {...defaultProps} hasGeneratedCode={false} hasOAuthToken={true} />);
 
-      const button = document.querySelector('[data-testid="btn-create-backend"]') as HTMLButtonElement;
+      const button = document.querySelector(
+        '[data-testid="btn-create-backend"]'
+      ) as HTMLButtonElement;
       expect(button).not.toBeNull();
       expect(button.disabled).toBe(true);
       expect(button.getAttribute('title')).toBe('Generate code first');
     });
 
     it('should be disabled when no OAuth token (hasOAuthToken=false)', () => {
-      render(
-        <TopBar
-          {...defaultProps}
-          hasGeneratedCode={true}
-          hasOAuthToken={false}
-        />
-      );
+      render(<TopBar {...defaultProps} hasGeneratedCode={true} hasOAuthToken={false} />);
 
-      const button = document.querySelector('[data-testid="btn-create-backend"]') as HTMLButtonElement;
+      const button = document.querySelector(
+        '[data-testid="btn-create-backend"]'
+      ) as HTMLButtonElement;
       expect(button).not.toBeNull();
       expect(button.disabled).toBe(true);
       expect(button.getAttribute('title')).toBe('Login with Supabase');
     });
 
     it('should prioritize "no code" message over "no OAuth" when both conditions are true', () => {
-      render(
-        <TopBar
-          {...defaultProps}
-          hasGeneratedCode={false}
-          hasOAuthToken={false}
-        />
-      );
+      render(<TopBar {...defaultProps} hasGeneratedCode={false} hasOAuthToken={false} />);
 
-      const button = document.querySelector('[data-testid="btn-create-backend"]') as HTMLButtonElement;
+      const button = document.querySelector(
+        '[data-testid="btn-create-backend"]'
+      ) as HTMLButtonElement;
       expect(button.disabled).toBe(true);
       // "Generate code first" takes precedence over "Login with Supabase"
       expect(button.getAttribute('title')).toBe('Generate code first');
@@ -84,15 +73,11 @@ describe('TopBar', () => {
 
   describe('Create Backend Button - Enabled State', () => {
     it('should be enabled when code exists AND OAuth token exists', () => {
-      render(
-        <TopBar
-          {...defaultProps}
-          hasGeneratedCode={true}
-          hasOAuthToken={true}
-        />
-      );
+      render(<TopBar {...defaultProps} hasGeneratedCode={true} hasOAuthToken={true} />);
 
-      const button = document.querySelector('[data-testid="btn-create-backend"]') as HTMLButtonElement;
+      const button = document.querySelector(
+        '[data-testid="btn-create-backend"]'
+      ) as HTMLButtonElement;
       expect(button).not.toBeNull();
       expect(button.disabled).toBe(false);
       expect(button.getAttribute('title')).toBe('Create Supabase backend');
@@ -110,16 +95,18 @@ describe('TopBar', () => {
         />
       );
 
-      const button = document.querySelector('[data-testid="btn-create-backend"]') as HTMLButtonElement;
+      const button = document.querySelector(
+        '[data-testid="btn-create-backend"]'
+      ) as HTMLButtonElement;
       expect(button).not.toBeNull();
-      
+
       // Check for loading class
       expect(button.className).toContain('loading');
-      
+
       // Check for spinner icon (Loader2)
       const spinner = button.querySelector('[data-testid="icon-loader"]');
       expect(spinner).not.toBeNull();
-      
+
       // Check for "Creating..." text
       expect(button.textContent).toContain('Creating...');
     });
@@ -134,7 +121,9 @@ describe('TopBar', () => {
         />
       );
 
-      const button = document.querySelector('[data-testid="btn-create-backend"]') as HTMLButtonElement;
+      const button = document.querySelector(
+        '[data-testid="btn-create-backend"]'
+      ) as HTMLButtonElement;
       expect(button.disabled).toBe(true);
     });
 
@@ -148,7 +137,9 @@ describe('TopBar', () => {
         />
       );
 
-      const button = document.querySelector('[data-testid="btn-create-backend"]') as HTMLButtonElement;
+      const button = document.querySelector(
+        '[data-testid="btn-create-backend"]'
+      ) as HTMLButtonElement;
       expect(button.getAttribute('title')).toBe('Creating backend...');
     });
   });
@@ -165,9 +156,11 @@ describe('TopBar', () => {
         />
       );
 
-      const button = document.querySelector('[data-testid="btn-create-backend"]') as HTMLButtonElement;
+      const button = document.querySelector(
+        '[data-testid="btn-create-backend"]'
+      ) as HTMLButtonElement;
       fireEvent.click(button);
-      
+
       expect(onCreateBackend).toHaveBeenCalledTimes(1);
     });
 
@@ -182,9 +175,11 @@ describe('TopBar', () => {
         />
       );
 
-      const button = document.querySelector('[data-testid="btn-create-backend"]') as HTMLButtonElement;
+      const button = document.querySelector(
+        '[data-testid="btn-create-backend"]'
+      ) as HTMLButtonElement;
       fireEvent.click(button);
-      
+
       expect(onCreateBackend).not.toHaveBeenCalled();
     });
 
@@ -199,9 +194,11 @@ describe('TopBar', () => {
         />
       );
 
-      const button = document.querySelector('[data-testid="btn-create-backend"]') as HTMLButtonElement;
+      const button = document.querySelector(
+        '[data-testid="btn-create-backend"]'
+      ) as HTMLButtonElement;
       fireEvent.click(button);
-      
+
       expect(onCreateBackend).not.toHaveBeenCalled();
     });
   });
@@ -210,11 +207,109 @@ describe('TopBar', () => {
     it('should have correct defaults when optional props not provided', () => {
       render(<TopBar {...defaultProps} />);
 
-      const button = document.querySelector('[data-testid="btn-create-backend"]') as HTMLButtonElement;
+      const button = document.querySelector(
+        '[data-testid="btn-create-backend"]'
+      ) as HTMLButtonElement;
       expect(button).not.toBeNull();
       // Default: hasGeneratedCode=false, hasOAuthToken=false
       expect(button.disabled).toBe(true);
       expect(button.getAttribute('title')).toBe('Generate code first');
+    });
+  });
+
+  describe('Deploy to Vercel Button', () => {
+    it('should render deploy button', () => {
+      render(<TopBar {...defaultProps} />);
+
+      const deployBtn = document.querySelector(
+        '[data-testid="btn-deploy-vercel"]'
+      ) as HTMLButtonElement;
+      expect(deployBtn).not.toBeNull();
+    });
+
+    it('should be disabled when no code has been generated', () => {
+      render(<TopBar {...defaultProps} hasGeneratedCode={false} isVercelAuthenticated={true} />);
+
+      const deployBtn = document.querySelector(
+        '[data-testid="btn-deploy-vercel"]'
+      ) as HTMLButtonElement;
+      expect(deployBtn.disabled).toBe(true);
+      expect(deployBtn.getAttribute('title')).toBe('Generate code first');
+    });
+
+    it('should show login tooltip when not Vercel authenticated', () => {
+      render(<TopBar {...defaultProps} hasGeneratedCode={true} isVercelAuthenticated={false} />);
+
+      const deployBtn = document.querySelector(
+        '[data-testid="btn-deploy-vercel"]'
+      ) as HTMLButtonElement;
+      expect(deployBtn.getAttribute('title')).toBe('Login with Vercel to deploy');
+    });
+
+    it('should be enabled when code exists and authenticated with Vercel', () => {
+      render(<TopBar {...defaultProps} hasGeneratedCode={true} isVercelAuthenticated={true} />);
+
+      const deployBtn = document.querySelector(
+        '[data-testid="btn-deploy-vercel"]'
+      ) as HTMLButtonElement;
+      expect(deployBtn.disabled).toBe(false);
+      expect(deployBtn.getAttribute('title')).toBe('Deploy to Vercel');
+    });
+
+    it('should show spinner and "Deploying..." text when isDeploying=true', () => {
+      render(
+        <TopBar
+          {...defaultProps}
+          hasGeneratedCode={true}
+          isVercelAuthenticated={true}
+          isDeploying={true}
+        />
+      );
+
+      const deployBtn = document.querySelector(
+        '[data-testid="btn-deploy-vercel"]'
+      ) as HTMLButtonElement;
+      expect(deployBtn.className).toContain('loading');
+      expect(deployBtn.textContent).toContain('Deploying...');
+      expect(deployBtn.disabled).toBe(true);
+    });
+
+    it('should call onDeploy callback when button is clicked', () => {
+      const onDeploy = vi.fn();
+      render(
+        <TopBar
+          {...defaultProps}
+          hasGeneratedCode={true}
+          isVercelAuthenticated={true}
+          onDeploy={onDeploy}
+        />
+      );
+
+      const deployBtn = document.querySelector(
+        '[data-testid="btn-deploy-vercel"]'
+      ) as HTMLButtonElement;
+      fireEvent.click(deployBtn);
+
+      expect(onDeploy).toHaveBeenCalledTimes(1);
+    });
+
+    it('should not call onDeploy when button is disabled', () => {
+      const onDeploy = vi.fn();
+      render(
+        <TopBar
+          {...defaultProps}
+          hasGeneratedCode={false}
+          isVercelAuthenticated={true}
+          onDeploy={onDeploy}
+        />
+      );
+
+      const deployBtn = document.querySelector(
+        '[data-testid="btn-deploy-vercel"]'
+      ) as HTMLButtonElement;
+      fireEvent.click(deployBtn);
+
+      expect(onDeploy).not.toHaveBeenCalled();
     });
   });
 });
