@@ -3,7 +3,7 @@ import { type ProjectFile } from '../../types';
 export interface ParseResult {
   message: string;
   files: ProjectFile[];
-  warnings: string[]; // array vacío si no hay issues
+  warnings: string[]; // empty array if no issues
 }
 
 export function parseAIResponse(text: string): ParseResult {
@@ -52,35 +52,35 @@ export function parseAIResponse(text: string): ParseResult {
     });
   }
 
-  // Validaciones para warnings
+  // Spec-compliant validations for warnings (SEC-CP)
+
+  // SEC-CP-001: Missing file markers
   if (files.length === 0) {
-    warnings.push('No se detectaron archivos en la respuesta del AI');
+    warnings.push('Missing file markers in response');
   }
 
-  // Verificar si hay paths de archivo vacíos o muy cortos (posible parsing issue)
+  // SEC-CP-008: Invalid/short file paths — per-file warning with path
   const emptyPaths = files.filter((f) => !f.path || f.path.length < 5);
-  if (emptyPaths.length > 0) {
-    warnings.push(`Se detectaron ${emptyPaths.length} archivos con path inválido o muy corto`);
-  }
+  emptyPaths.forEach((f) => {
+    warnings.push(`Invalid file path: ${f.path || '(empty)'}`);
+  });
 
-  // Detect unclosed code blocks: count standalone ``` lines (including ```language)
+  // SEC-CP-002: Detect unclosed code blocks — count standalone ``` lines (including ```language)
   const backtickLineCount = lines.filter((l) => /^\s*```\S*\s*$/.test(l)).length;
   if (backtickLineCount % 2 !== 0) {
     warnings.push('Unclosed code block detected');
   }
 
-  // Detect empty file content: file with File marker but content is only whitespace
+  // SEC-CP-003: Detect empty file content — file with File marker but content is only whitespace
   const emptyContentFiles = files.filter((f) => !f.content || f.content.trim().length === 0);
-  if (emptyContentFiles.length > 0) {
-    emptyContentFiles.forEach((f) => {
-      warnings.push(`Empty file content for: ${f.path}`);
-    });
-  }
+  emptyContentFiles.forEach((f) => {
+    warnings.push(`Empty file content for: ${f.path}`);
+  });
+
+  // Note: short explanation message warning REMOVED — not in spec.
+  // SEC-CP-004/007: valid input (proper markers + closed blocks) should return warnings: []
 
   const message = messageLines.join('\n').trim();
-  if (!message || message.length < 10) {
-    warnings.push('El mensaje de explicación está vacío o es muy corto');
-  }
 
   return {
     message,
