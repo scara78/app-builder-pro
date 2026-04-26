@@ -16,7 +16,11 @@
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\""
   },
   "lint-staged": {
-    "*.{ts,tsx,css}": "prettier --write"
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{css}": "prettier --write"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
